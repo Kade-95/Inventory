@@ -1,0 +1,177 @@
+#single-form-details {
+    display: grid;
+    grid-gap: 2em;
+    padding: 1em;
+}
+
+#single-form-name {
+    font-size: 2em;
+    text-transform: uppercase;
+    color: gray;
+    display: flex;
+    justify-content: space-between;
+    padding: 1em;
+}
+
+#single-form-name-text {
+    color: inherit;
+}
+
+#single-form-controls {
+    display: grid;
+    grid-gap: 1em;
+    grid-template-columns: repeat(3, max-content);
+}
+
+#single-form-controls .icon:hover {
+    color: var(--accient-color);
+    cursor: pointer;
+}
+
+#single-form-other-details {
+    display: grid;
+    grid-gap: 2em;
+    align-items: start;
+}
+
+#single-form-related {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 2em;
+    align-items: start;
+}
+
+.single-form-title {
+    font-size: 1.2em;
+    color: #333333;
+    text-decoration: underline;
+}
+
+.single-form-list {
+    display: grid;
+    grid-gap: .5em;
+    padding: .5em;
+    overflow: auto;
+}
+
+.single-form-list-single {
+    font-size: 1.2em;
+}
+
+.single-form-list-single:hover {
+    color: var(--accient-color);
+}
+
+.single-form-list-single-text, .single-form-list-single .icon {
+    color: inherit;
+    font-size: inherit;
+}
+
+#single-form-actions-container {
+    display: flex;
+    padding: .5em;
+}
+
+#single-form-actions-container .action {
+    cursor: pointer;
+    padding: .5em;
+    border-radius: var(--fill-parent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    background-color: var(--accient-color);
+    margin: .5em;
+}
+
+#task-data-container {
+    display: grid;
+    grid-gap: 1em;
+    padding: 1em;
+    grid-template-columns: repeat(2, 1fr);
+    align-items: flex-start;
+}
+
+#task-container, #data-container {
+    display: grid;
+    gap: 1em;
+}
+
+.single-form-data, .single-form-task {
+    display: grid;
+    grid-gap: 1em;
+    grid-template-columns: 1fr max-content;
+    background: var(--secondary-color);
+    color: var(--primary-color);
+    padding: .5em;
+    align-items: flex-end;
+    gap: 1em;
+}
+
+.readable-data-container, .readable-task-container {
+    color: inherit;
+    display: grid;
+    gap: 1em;
+}
+
+.single-readable-data, .single-readable-task {
+    color: inherit;
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: .5em;
+}
+
+.single-readable-data-name, .single-readable-task-name {
+    text-transform: uppercase;
+}
+
+.single-readable-data-name, .single-readable-data-value, .single-readable-task-name, .single-readable-task-value {
+    color: inherit;
+    word-break: keep-all;
+}
+
+.single-form-data-controls, .single-form-task-controls {
+    color: inherit;
+    display: grid;
+    align-items: center;
+    grid-gap: 1em;
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.single-form-data-controls .icon, .single-form-task-controls .icon {
+    cursor: pointer;
+    color: inherit;
+    width: 1em;
+    height: 1em;
+    padding: unset;
+}
+
+#tasks-container{
+    display: grid;
+    gap: .5em;
+}
+
+#tasks-container .single-task {
+    display: grid;
+    gap: 1em;
+    border: 1px solid var(--secondary-color);
+    padding: 1em;
+    align-items: center;
+}
+
+#tasks-container .single-task .delete-task {
+    cursor: pointer;
+    justify-self: right;
+}
+
+@media(min-width: 700px) {
+    #single-form-other-details {
+        grid-template-columns: repeat(2, 1fr);
+        max-height: 500px;
+    }
+
+    #tasks-container .single-task{
+        grid-template-columns: 1fr repeat(3, max-content);
+    }
+}

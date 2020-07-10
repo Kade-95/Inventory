@@ -1,0 +1,45 @@
+
+#editable-image-container{
+    display: flex;
+    justify-content: center;
+    justify-self: center;
+    align-items: center;
+    position: relative;
+    width: var(--fill-parent);
+}
+
+#editable-image{
+    width: var(--fill-parent);
+    height: auto;
+    min-height: 300px;
+    box-shadow: 2px 2px 10px #333333;
+    max-height: 500px;
+}
+
+#editable-image-controls{
+    position: absolute;
+    width: var(--match-parent);
+    height: inherit;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+    visibility: hidden;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+#editable-image-controls .icon{
+    cursor: pointer;
+    border-radius: var(--fill-parent);
+    background-color: var(--secondary-color);
+    color: var(--accient-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: .5em;
+}
+
+#editable-image-controls .icon:hover{
+    color: var(--primary-color);
+}

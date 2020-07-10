@@ -1,0 +1,65 @@
+#views-container{
+    padding: 1em;
+    display: grid;
+    height: var(--fill-parent);
+    grid-template-rows: max-content 1fr;
+}
+
+#views-menu{
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
+    gap: .5em;
+    justify-content: flex-start;
+    align-items: center;
+    width: fit-content;
+}
+
+.views-menu-item{
+    padding: .5em 1em;
+    background-color: var(--accient-color);
+    border-top-right-radius: 10px;
+    cursor: pointer;
+}
+
+.views-menu-item:hover, .views-menu-item.selected{
+    background-color: var(--secondary-color);
+    color: var(--accient-color);
+}
+
+#views-content{
+    padding: 1em 0em;
+}
+
+#views-colors-view, #views-themes-view{
+    display: grid;
+    gap: 1em;
+}
+
+.views-single-color, .views-single-theme{
+    min-width: 400px;
+    max-width: 600px;
+    width: max-content;
+    display: grid;
+    grid-template-columns: max-content 1fr max-content;
+    gap: 1em;
+    align-items: center;
+    padding: 1em;
+    background-color: var(--secondary-color);
+    color: var(--primary-color);
+}
+
+.views-single-color .icon, .views-single-theme .icon{
+    color: inherit;
+}
+
+.views-color-name, .views-theme-name{
+    color: inherit;
+    font-size: 1.1em;
+    font-weight: bold;
+    text-transform: capitalize;
+}
+
+.views-color-value, .views-theme-select{
+    cursor: pointer;
+    border: 1px solid var(--primary-color);
+}

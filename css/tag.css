@@ -1,0 +1,76 @@
+#tag-details{
+    display: grid;
+    grid-gap: 2em;
+    padding: 1em;
+}
+
+#tag-name{
+    font-size: 2em;
+    text-transform: uppercase;
+    color: gray;
+    display: flex;
+    justify-content: space-between;
+    padding: 1em;
+}
+
+#tag-name-text{
+    color: inherit;
+}
+
+#tag-controls{
+    display: grid;
+    grid-gap: 1em;
+    grid-template-columns: repeat(3, max-content);
+}
+
+#tag-controls .icon:hover{
+    color: var(--accient-color);
+    cursor: pointer;
+}
+
+#tag-other-details{
+    display: grid;
+    grid-gap: 2em;
+    align-items: start;
+    overflow: hidden;
+}
+
+#tag-related{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 2em;
+    align-items: start;
+}
+
+.tag-title{
+    font-size: 1.2em;
+    color: #333333;
+    text-decoration: underline;
+}
+
+.tag-list{
+    display: grid;
+    grid-gap: .5em;
+    padding: .5em;
+    overflow: auto;
+}
+
+.tag-list-single{
+    font-size: 1.2em;
+}
+
+.tag-list-single:hover{
+    color: var(--accient-color);
+}
+
+.tag-list-single-text, .tag-list-single .icon{
+    color: inherit;
+    font-size: inherit;
+}
+
+@media(min-width: 700px){
+    #tag-other-details{
+        grid-template-columns: repeat(2, 1fr);
+        max-height: 500px;
+    }
+}

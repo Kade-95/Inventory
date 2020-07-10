@@ -1,0 +1,92 @@
+#reportgenerator-details {
+    display: grid;
+    grid-template-rows: max-content 1fr;
+    gap: 1em;
+    height: var(--fill-parent);
+    overflow: hidden;
+    padding: 0em 1em;
+}
+
+#reportgenerator-name {
+    font-size: 2em;
+    text-transform: uppercase;
+    color: gray;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1em;
+}
+
+#reportgenerator-name-text {
+    color: inherit;
+}
+
+#reportgenerator-controls {
+    display: grid;
+    grid-gap: 1em;
+    grid-template-columns: repeat(3, max-content);
+}
+
+#reportgenerator-controls .icon:hover {
+    color: var(--accient-color);
+    cursor: pointer;
+}
+
+.reportgenerator-title {
+    font-size: 1.2em;
+    color: #333333;
+    text-decoration: underline;
+}
+
+#reportgenerator-main-details {
+    display: grid;
+    grid-gap: 1em;
+    border: 1px solid var(--secondary-color);
+    border-radius: 10px;
+    padding: 1em .5em;
+    width: var(--match-parent);
+}
+
+.reportgenerator-main-details-single {
+    display: grid;
+    grid-template-columns: max-content 1fr max-content;
+    grid-gap: .3em;
+    background-color: var(--secondary-color);
+    padding: 1em .5em;
+    color: var(--primary-color);
+    align-items: center;
+}
+
+.reportgenerator-main-details-single>.icon, .reportgenerator-main-details-name, .reportgenerator-main-details-value {
+    color: inherit;
+}
+
+#reportgenerator-contents {
+    display: grid;
+    height: var(--fill-parent);
+    grid-template-rows: 1fr;
+    overflow: hidden;
+    grid-gap: 1em;
+    padding: 0em 1em;
+}
+
+.reportgenerator-contents-single {
+    background-color: var(--primary-color);
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    grid-gap: 1em;
+    padding: 1em;
+}
+
+.reportgenerator-contents-name {
+    text-transform: uppercase;
+    color: var(--accient-color);
+}
+
+@media(min-width: 700px) {
+    #reportgenerator-details {
+        grid-template-columns: max-content 1fr;
+        grid-template-rows: 1fr;
+        align-items: flex-start;
+    }
+}

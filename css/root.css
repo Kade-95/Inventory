@@ -1,0 +1,39 @@
+* {
+    margin: unset;
+    padding: unset;
+    text-decoration: unset;
+    color: unset;
+    font-size: 1em;
+    background-color: transparent;
+    color: var(--secondary-color);
+    font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
+html, body {
+    width: var(--fill-parent);
+    height: 100vh;
+    background-color: var(--primary-color);
+}
+
+body {
+    display: grid;
+    overflow: hidden;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--accient-color);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color);
+    transition-duration: .5s;
+}
+
+@media(min-width: 700px){
+    
+}

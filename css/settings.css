@@ -1,0 +1,36 @@
+#settings-menu{
+    display: grid;
+    grid-gap: 1em;
+    padding: 1em .5em;
+    grid-template-columns: repeat(6, max-content);
+    border-top: 1px solid rgba(128, 128, 128, 0.5);;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.5);
+}
+
+.settings-menu-link{
+    text-transform: uppercase;
+    color: var(--light-secondary-color);
+}
+
+.settings-menu-link.active, .settings-menu-link:hover{
+    color: var(--secondary-color);
+    text-decoration: underline;
+}
+
+#settings-main-window{
+    display: grid;
+    grid-template-rows: max-content 1fr;
+    height: var(--fill-parent);
+    overflow: hidden;
+}
+
+.settings-sub-menu{
+    padding: 1em;
+    display: grid;
+    justify-content: left;
+}
+
+.settings-content-window{
+    padding: 1em;
+    display: grid;
+}
