@@ -181,15 +181,13 @@ let categories = (mainBody) => {
                 title: 'Clone Category', attributes: { enctype: 'multipart/form-data', id: 'clone-category-form', class: 'form' },
                 contents: {
                     name: { element: 'input', attributes: { id: 'name', name: 'name', value: category.name } },
-                    image: { element: 'input', attributes: { id: 'image', name: 'image', type: 'file' } },
-                    parents: { element: 'select-element', attributes: { id: 'parents', contents: JSON.stringify(categoryNames), multiple: 'single', external: true, value: category.parents } }
+                    image: { element: 'input', attributes: { id: 'image', name: 'image', type: 'file', ignore: true } },
+                    parents: { perceptorElement: 'createSelect', params: { contents: categoryNames, multiple: 'single', external: true, attributes: { id: 'parents', name: 'parents', value: category.parents } } }
                 },
                 buttons: {
                     submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Clone', state: { name: 'submit', owner: '#clone-category-form' } },
                 }
             });
-
-            let popUp = perceptor.popUp(cloneForm);
 
             make(cloneForm, categoryNames);
         });
@@ -200,15 +198,13 @@ let categories = (mainBody) => {
             title: 'Create Category', attributes: { enctype: 'multipart/form-data', id: 'create-category-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name' } },
-                image: { element: 'input', attributes: { id: 'image', name: 'image', type: 'file' } },
-                parents: { element: 'select-element', attributes: { id: 'parents', contents: JSON.stringify(categoryNames), multiple: 'single', external: true } }
+                image: { element: 'input', attributes: { id: 'image', name: 'image', type: 'file', ignore: true } },
+                parents: { perceptorElement: 'createSelect', params: { contents: categoryNames, multiple: 'single', external: true, attributes: { id: 'parents', name: 'parents' } } }
             },
             buttons: {
                 submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Create', state: { name: 'submit', owner: '#create-category-form' } },
             }
         });
-
-        let popUp = perceptor.popUp(createForm);
 
         make(createForm, categoryNames);
     }
@@ -225,7 +221,7 @@ let categories = (mainBody) => {
             title: 'Edit Category', attributes: { enctype: 'multipart/form-data', id: 'edit-category-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name', value: category.name } },
-                parents: { element: 'select-element', attributes: { id: 'parents', contents: JSON.stringify(categoryNames), multiple: 'single', external: true, value: category.parents } }
+                parents: { perceptorElement: 'createSelect', params: { contents: categoryNames, multiple: 'single', external: true, attributes: { id: 'parents', name: 'parents', value: category.parents } } }
             },
             buttons: {
                 submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Edit', state: { name: 'submit', owner: '#edit-category-form' } },
@@ -251,7 +247,7 @@ let categories = (mainBody) => {
                 return;
             }
 
-            for (let i of parents.split(',')) {
+            for (let i of parents) {
                 i = i.trim();
                 if (i != '') {
                     if (Object.keys(categoryNames).includes(i)) {
@@ -266,7 +262,7 @@ let categories = (mainBody) => {
             system.connect({ data }).then(result => {
                 if (result == 1) {
                     system.notify({ note: 'Category Editted' });
-                    reload();
+                    system.reload();
                 }
                 else if (result.found == 'name') {
                     system.notify({ note: 'Category already in exists' });
@@ -287,6 +283,9 @@ let categories = (mainBody) => {
     }
 
     let make = (form, list) => {
+        let popUp = perceptor.popUp(form);
+        popUp.find('#toggle-window').click();
+
         form.addEventListener('submit', event => {
             event.preventDefault();
             let data = perceptor.jsonForm(form);
@@ -303,7 +302,7 @@ let categories = (mainBody) => {
                 return;
             }
 
-            for (let i of parents.split(',')) {
+            for (let i of parents) {
                 i = i.trim();
                 if (i != '') {
                     if (Object.keys(list).includes(i)) {
@@ -318,7 +317,7 @@ let categories = (mainBody) => {
             system.connect({ data }).then(result => {
                 if (result == 1) {
                     system.notify({ note: 'Category Created' });
-                    reload();
+                    system.reload();
                 }
                 else if (result.found == 'name') {
                     system.notify({ note: 'Category already in exists' });

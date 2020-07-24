@@ -218,7 +218,7 @@ class Items {
             let formValidation = perceptor.validateForm(form, { nodeNames: ['INPUT', 'select-element'] });
 
             if (!formValidation.flag) {
-                loading.replaceWith(editForm.getState({ name: 'submit' }));
+                loading.replaceWith(form.getState({ name: 'submit' }));
                 editForm.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `Form ${formValidation.elementName} is faulty` });
                 return;
             }
@@ -236,7 +236,7 @@ class Items {
             data.newCats = [];
             data.categories = [];
 
-            for (let i of categories.split(',')) {
+            for (let i of categories) {
                 i = i.trim();
                 if (i != '') {
                     if (Object.keys(categoryNames).includes(i)) {
@@ -252,7 +252,7 @@ class Items {
             data.newTags = [];
             data.tags = [];
 
-            for (let i of tags.split(',')) {
+            for (let i of tags) {
                 i = i.trim();
                 if (i != '') {
                     if (Object.keys(tagNames).includes(i)) {
@@ -304,8 +304,9 @@ class Items {
                     count: { element: 'input', attributes: { id: 'count', name: 'count', type: 'number', min: 0, value: result.item.count } },
                     min: { element: 'input', attributes: { id: 'min', name: 'min', type: 'number', min: 0, value: result.item.min } },
                     max: { element: 'input', attributes: { id: 'max', name: 'max', type: 'number', min: 0, value: result.item.max } },
-                    categories: { element: 'select-element', attributes: { id: 'categories', name: 'categories', value: result.item.categories, contents: JSON.stringify(categoryNames), multiple: 'single', external: true } },
-                    tags: { element: 'select-element', attributes: { id: 'tags', name: 'tags', value: result.item.tags, contents: JSON.stringify(tagNames), multiple: 'single', external: true } }
+                    categories: { perceptorElement: 'createSelect', params: { contents: categoryNames, multiple: 'single', external: true, attributes: { id: 'categories', name: 'categories', value: result.item.categories, } } },
+
+                    tags: { perceptorElement: 'createSelect', params: { contents: tagNames, multiple: 'single', external: true, attributes: { id: 'tags', name: 'tags', value: result.item.tags } } }
                 },
                 buttons: {
                     submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Edit', state: { name: 'submit', owner: '#edit-item-form' } },
@@ -343,7 +344,7 @@ class Items {
                 data.newCats = [];
                 data.categories = [];
 
-                for (let i of categories.split(',')) {
+                for (let i of categories) {
                     i = i.trim();
                     if (i != '') {
                         if (Object.keys(categoryNames).includes(i)) {
@@ -359,7 +360,7 @@ class Items {
                 data.newTags = [];
                 data.tags = [];
 
-                for (let i of tags.split(',')) {
+                for (let i of tags) {
                     i = i.trim();
                     if (i != '') {
                         if (Object.keys(tagNames).includes(i)) {
@@ -411,8 +412,9 @@ class Items {
                     min: { element: 'input', attributes: { id: 'min', name: 'min', type: 'number', min: 0, value: result.item.min } },
                     max: { element: 'input', attributes: { id: 'max', name: 'max', type: 'number', min: 0, value: result.item.max } },
                     image: { element: 'input', attributes: { id: 'image', name: 'image', type: 'file' } },
-                    categories: { element: 'select-element', attributes: { id: 'categories', name: 'categories', value: result.item.categories, contents: JSON.stringify(categoryNames), multiple: 'single', external: true } },
-                    tags: { element: 'select-element', attributes: { id: 'tags', name: 'tags', value: result.item.tags, contents: JSON.stringify(tagNames), multiple: 'single', external: true } }
+                    categories: { perceptorElement: 'createSelect', params: { contents: categoryNames, multiple: 'single', external: true, attributes: { id: 'categories', name: 'categories', value: result.item.categories, } } },
+
+                    tags: { perceptorElement: 'createSelect', params: { contents: tagNames, multiple: 'single', external: true, attributes: { id: 'tags', name: 'tags', value: result.item.tags } } }
                 },
                 buttons: {
                     submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Clone', state: { name: 'submit', owner: '#clone-item-form' } },
@@ -439,15 +441,24 @@ class Items {
                 title: 'Create Item', attributes: { enctype: 'multipart/form-data', id: 'create-item-form', class: 'form', style: { border: '1px solid var(--secondary-color)', maxWidth: '100%' } },
                 contents: {
                     name: { element: 'input', attributes: { id: 'name', name: 'name' } },
+
                     code: { element: 'input', attributes: { id: 'code', name: 'code' } },
+
                     price: { element: 'input', attributes: { id: 'price', name: 'price', type: 'number', min: 0 } },
+
                     unit: { element: 'input', attributes: { id: 'unit', name: 'unit' } },
+
                     count: { element: 'input', attributes: { id: 'count', name: 'count', type: 'number', min: 0 } },
+
                     min: { element: 'input', attributes: { id: 'min', name: 'min', type: 'number', min: 0 } },
+
                     max: { element: 'input', attributes: { id: 'max', name: 'max', type: 'number', min: 0 } },
-                    image: { element: 'input', attributes: { id: 'image', name: 'image', type: 'file' } },
-                    categories: { element: 'select-element', attributes: { id: 'categories', name: 'categories', contents: JSON.stringify(categoryNames), multiple: 'single', external: true } },
-                    tags: { element: 'select-element', attributes: { id: 'tags', name: 'tags', contents: JSON.stringify(tagNames), multiple: 'single', external: true } }
+
+                    image: { element: 'input', attributes: { id: 'image', name: 'image', type: 'file', ignore: true } },
+
+                    categories: { perceptorElement: 'createSelect', params: { contents: categoryNames, multiple: 'single', external: true, attributes: { id: 'categories', name: 'categories', } } },
+
+                    tags: { perceptorElement: 'createSelect', params: { contents: tagNames, multiple: 'single', external: true, attributes: { id: 'tags', name: 'tags' } } }
                 },
                 buttons: {
                     submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Create', state: { name: 'submit', owner: '#create-item-form' } },

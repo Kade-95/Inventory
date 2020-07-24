@@ -1,0 +1,48 @@
+#history-main-window{
+    height: var(--fill-parent);
+    overflow: hidden;
+    display: grid;
+    padding: 0em .5em;
+}
+
+#history-main-window .perceptor-table-container{
+    grid-template-rows: max-content 1fr;
+}
+
+.history-event{
+    display: grid;
+    grid-template-rows: max-content 1fr;
+    gap: .5em;
+    width: var(--fill-parent);
+    overflow: hidden;
+}
+
+.history-event-details{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: .5em;
+    padding: .5em 1em;
+}
+
+.history-event-action-id, .history-event-time-by{
+    display: grid;
+    grid-template-rows: max-content 1fr;
+    gap: .5em;
+    padding: .3em;
+}
+
+.history-event-time-by{
+    justify-items: right;
+}
+
+.history-event-action{
+    font-size: 1.3em;
+}
+
+.history-event-data{
+    background-color: var(--secondary-color);
+    color: var(--primary-color);
+    padding: 1%;
+    height: 90%;
+    overflow: auto;
+}

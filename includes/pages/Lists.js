@@ -1,7 +1,7 @@
 let lists = (mainBody) => {
     let settingsMainWindow = mainBody.find('#settings-main-window');
     let loading = perceptor.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
-    let urlVars = perceptor.urlSplitter(location.href);
+    let urlVars = perceptor.urlSplitter(location.href).vars;
 
     let addRow = (list, callback) => {
         let names = [];
@@ -31,7 +31,7 @@ let lists = (mainBody) => {
             system.connect({ data: { action: 'insertIntoList', id: list._id, new: JSON.stringify(data) } }).then(inserted => {
                 if (inserted == true) {
                     system.notify({ note: 'Row inserted' });
-                    reload();
+                    system.reload();
                 }
                 else {
                     system.notify({ note: 'Row was not inserted' });
@@ -70,13 +70,14 @@ let lists = (mainBody) => {
         });
 
         makeRow(editForm, item => {
-            item._id = listRow.find(`td[data-name="table-data-_id"]`).textContent;
+            item._id = id;            
             item = JSON.stringify(item);
-            let data = { action: 'editListItem', id, item }
+            
+            let data = { action: 'editListItem', id: urlVars.id, item }
             system.connect({ data }).then(editted => {
                 if (editted == true) {
                     system.notify({ note: 'Row Editted' });
-                    reload();
+                    system.reload();
                 }
                 else {
                     system.notify({ note: 'Row was not editted' });
@@ -117,7 +118,7 @@ let lists = (mainBody) => {
             system.connect({ data: { action: 'insertIntoList', id: list._id, new: JSON.stringify(data) } }).then(inserted => {
                 if (inserted == true) {
                     system.notify({ note: 'Row Cloned' });
-                    reload();
+                    system.reload();
                 }
                 else {
                     system.notify({ note: 'Row was not cloned' });
@@ -131,7 +132,7 @@ let lists = (mainBody) => {
         system.connect({ data }).then(deleted => {
             if (deleted == true) {
                 system.notify({ note: 'Row deleted' });
-                reload();
+                system.reload();
             }
             else {
                 system.notify({ note: 'Row was not deleted' });
@@ -206,7 +207,7 @@ let lists = (mainBody) => {
     }
 
     let show = () => {
-        let id = urlVars.vars.id;
+        let id = urlVars.id;
         let run = {
             me: system.get({ collection: 'lists', query: { _id: id }, changeQuery: { _id: 'objectid' } }),
             all: system.get({ collection: 'lists', query: {}, options: { projection: { name: 1 } }, many: true })
@@ -352,7 +353,7 @@ let lists = (mainBody) => {
             system.connect({ data }).then(result => {
                 if (result == 1) {
                     system.notify({ note: 'List Editted' });
-                    reload();
+                    system.reload();
                 }
                 else if (result.found == 'name') {
                     system.notify({ note: 'List already in exists' });
@@ -390,7 +391,7 @@ let lists = (mainBody) => {
                         system.redirect(location.origin + '/settings.html?page=lists');
                     }
                     else {
-                        reload();
+                        system.reload();
                     }
                 }
                 else {
@@ -421,7 +422,7 @@ let lists = (mainBody) => {
             system.connect({ data }).then(result => {
                 if (result == 1) {
                     system.notify({ note: 'List Created' });
-                    reload();
+                    system.reload();
                 }
                 else if (result.found == 'name') {
                     system.notify({ note: 'List already in exists' });
@@ -434,7 +435,7 @@ let lists = (mainBody) => {
 
     }
 
-    if (!perceptor.isset(urlVars.vars.action) || urlVars.vars.action == 'view') {
+    if (!perceptor.isset(urlVars.action) || urlVars.action == 'view') {
         settingsMainWindow.makeElement([
             {
                 element: 'div', attributes: { class: 'settings-sub-menu' }, children: [
@@ -478,13 +479,13 @@ let lists = (mainBody) => {
             });
         });
     }
-    else if (urlVars.vars.action == 'show') {
+    else if (urlVars.action == 'show') {
         show();
     }
-    else if (urlVars.vars.action == 'clone') {
+    else if (urlVars.action == 'clone') {
         clone();
     }
-    else if (urlVars.vars.action == 'delete') {
+    else if (urlVars.action == 'delete') {
         _delete();
     }
 }

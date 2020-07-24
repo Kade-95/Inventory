@@ -10,8 +10,8 @@ class Reports {
         mainBody.render([
             {
                 element: 'div', attributes: { id: 'main-container-body-main-actions' }, children: [
-                    { element: 'a', attributes: { class: 'icon fas fa-plus', id: 'new-icon', title: 'Create Form', href: 'forms.html?page=create' } },
-                    { element: 'span', attributes: { id: 'more-forms-controls' } }
+                    { element: 'a', attributes: { class: 'icon fas fa-plus', id: 'new-icon', title: 'Create Report', href: 'reports.html?page=create' } },
+                    { element: 'span', attributes: { id: 'main-container-body-main-actions-others' } }
                 ]
             },
             {
@@ -33,56 +33,41 @@ class Reports {
     }
 
     view(container) {
-        let fetch = { reportgenerators: system.get({ collection: 'reportgenerators', query: {}, many: true }), reports: system.get({ collection: 'reports', query: {}, many: true }) };
+        let fetch = { reportGenerators: system.get({ collection: 'reportgenerators', query: {}, many: true }), reports: system.get({ collection: 'reports', query: {}, many: true }) };
 
         perceptor.runParallel(fetch, result => {
             let run = {};
             let types = [];
             for (let report of result.reports) {
-                // form.time = new Date(Math.floor(form.time)).toLocaleDateString();
+                console.log(report);
+                report.timeCreated = perceptor.time_date(report.timeCreated);
+                report.lastModified = perceptor.time_date(report.lastModified);;
 
-                run[report.author] = system.get({ collection: 'users', query: { _id: form.author }, options: { projection: { userName: 1, _id: 0 } }, changeQuery: { _id: 'objectid' } });
+                run[report.author] = system.get({ collection: 'users', query: { _id: report.author }, options: { projection: { userName: 1, _id: 0 } }, changeQuery: { _id: 'objectid' } });
             }
 
-            perceptor.runParallel(run, authors => {
-                for (let report of result.reports) {
-                    report.author = authors[report.author].userName;
-                }
-            });
-
-            for (let report of result.reportgenerators) {                
-                if (!types.includes(report.name)) {
-                    types.push(report.name);
+            for (let reportGenerator of result.reportGenerators) {
+                if (!types.includes(reportGenerator.name)) {
+                    types.push(reportGenerator.name);
                 }
             }
 
-            let selectCell = perceptor.cell({ element: 'select', name: 'Form', dataAttributes: {}, options: types });
-            document.body.find('#more-forms-controls').append(selectCell);
+            let selectCell = perceptor.cell({ element: 'select', name: 'Report', dataAttributes: {}, options: types });
+            document.body.find('#main-container-body-main-actions-others').append(selectCell);
+
             let renderTable = value => {
-                let contents = [];
-                let selectedReport = perceptor.array.find(result.reportgenerators, report => {
-                    return report.name == value;
+                let id = perceptor.array.find(result.reportGenerators, generator => {
+                    return generator.name == value;
+                })._id;
+
+                let contents = perceptor.array.findAll(result.reports, report => {
+                    return report.content._id == id;
                 });
 
-                for (let report of result.reports) {
-                    if (report.type == selectedReport._id) {
-                        let reportContent = {};
-                        perceptor.object.copy(report, reportContent);
-                        for (let content of selectedReport.contents) {
-                            if (content.show == 'True') {
-                                reportContent[content.name] = report.contents[content.name];
-                            }
-                        }
-                        reportContent.contents = Object.keys(reportContent.contents).length;
-                        reportContent.tasks = Object.keys(reportContent.tasks).length;
-                        contents.push(reportContent);
-                    }
-                }
-
-                let reportsTable = perceptor.createTable({ title: value + ' Reports Table', contents, search: true, sort: true, filter: ['All', 'Enough', 'Excess', 'Low'] });
+                let reportsTable = perceptor.createTable({ title: value + ' Reports Table', contents, search: true, sort: true, projection: { content: -1 } });
                 container.render(reportsTable);
 
-                perceptor.listenTable({ options: ['edit', 'clone', 'delete'], table: reportsTable }, {
+                perceptor.listenTable({ options: ['view', 'edit', 'clone', 'delete'], table: reportsTable }, {
                     click: event => {
                         let target = event.target;
                         let { row } = target.getParents('.perceptor-table-column-cell').dataset;
@@ -90,13 +75,16 @@ class Reports {
                         let id = table.find(`.perceptor-table-column[data-name="_id"]`).find(`.perceptor-table-column-cell[data-row="${row}"]`).dataset.value;
 
                         if (target.id == 'perceptor-table-option-edit') {
-                            system.redirect('forms.html?page=edit&id=' + id);
+                            system.redirect('reports.html?page=edit&id=' + id);
                         }
                         else if (target.id == 'perceptor-table-option-clone') {
-                            system.redirect('forms.html?page=clone&id=' + id);
+                            system.redirect('reports.html?page=clone&id=' + id);
                         }
                         else if (target.id == 'perceptor-table-option-delete') {
-                            system.redirect('forms.html?page=delete&id=' + id);
+                            system.redirect('reports.html?page=delete&id=' + id);
+                        }
+                        else if (target.id == 'perceptor-table-option-view') {
+                            system.redirect('reports.html?page=show&id=' + id);
                         }
                     },
 
@@ -122,312 +110,107 @@ class Reports {
                 });
             };
 
-            renderTable(types[0])
-            selectCell.find('#Form-cell').onChanged(value => {
-                renderTable(value);
+            perceptor.runParallel(run, authors => {
+                for (let report of result.reports) {
+                    report.author = authors[report.author].userName;
+                }
+
+                renderTable(types[0])
+                selectCell.find('#Report-cell').onChanged(value => {
+                    renderTable(value);
+                });
             });
         });
     }
 
     show(container) {
         let id = this.url.vars.id;
-        system.get({ collection: 'items', query: { _id: id }, changeQuery: { _id: 'objectid' } }).then(item => {
-            container.makeElement([
-                {
-                    element: 'div', attributes: { id: 'item-details' }, children: [
-                        {
-                            element: 'span', attributes: { id: 'item-name' }, children: [
-                                { element: 'h2', attributes: { id: 'item-name-text' }, text: item.name },
-                                {
-                                    element: 'span', attributes: { id: 'item-controls' }, children: [
-                                        { element: 'i', attributes: { class: 'icon fas fa-pen', href: 'items.html?page=edit&id=' + item._id } },
-                                        { element: 'i', attributes: { class: 'icon fas fa-clone', href: 'items.html?page=clone&id=' + item._id } },
-                                        { element: 'a', attributes: { class: 'icon fas fa-trash-alt', href: 'items.html?page=delete&id=' + item._id } },
-                                    ]
-                                }
-                            ]
-                        },
-                        {
-                            element: 'span', attributes: { id: 'item-other-details' }, children: [
-                                system.editableImage('item-image', item.image),
-                                {
-                                    element: 'span', attributes: { id: 'show-user-work-details' }, children: [
-                                        {
-                                            element: 'span', attributes: { class: 'show-user-work-detail-single' }, children: [
-                                                { element: 'i', attributes: { class: 'icon fas fa-user' } },
-                                                { element: 'p', attributes: { class: 'show-user-work-detail-single-name' }, text: 'Price' },
-                                                { element: 'p', attributes: { class: 'show-user-work-detail-single-value' }, text: item.price }
-                                            ]
-                                        },
-                                        {
-                                            element: 'p', attributes: { class: 'show-user-work-detail-single' }, children: [
-                                                { element: 'i', attributes: { class: 'icon fas fa-envelope' } },
-                                                { element: 'p', attributes: { class: 'show-user-work-detail-single-name' }, text: 'Unit' },
-                                                { element: 'p', attributes: { class: 'show-user-work-detail-single-value' }, text: item.unit }
-                                            ]
-                                        },
-                                        {
-                                            element: 'p', attributes: { class: 'show-user-work-detail-single' }, children: [
-                                                { element: 'i', attributes: { class: 'icon fas fa-phone' } },
-                                                { element: 'p', attributes: { class: 'show-user-work-detail-single-name' }, text: 'Count' },
-                                                { element: 'p', attributes: { class: 'show-user-work-detail-single-value' }, text: item.count }
-                                            ]
-                                        },
-                                        {
-                                            element: 'p', attributes: { class: 'show-user-work-detail-single' }, children: [
-                                                { element: 'i', attributes: { class: 'icon fas fa-building' } },
-                                                { element: 'p', attributes: { class: 'show-user-work-detail-single-name' }, text: 'Minimium' },
-                                                { element: 'p', attributes: { class: 'show-user-work-detail-single-value' }, text: item.min }
-                                            ]
-                                        },
-                                        {
-                                            element: 'p', attributes: { class: 'show-user-work-detail-single' }, children: [
-                                                { element: 'i', attributes: { class: 'icon fas fa-users' } },
-                                                { element: 'p', attributes: { class: 'show-user-work-detail-single-name' }, text: 'Maximium' },
-                                                { element: 'p', attributes: { class: 'show-user-work-detail-single-value' }, text: item.max }
-                                            ]
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                },
-                { element: 'div', attributes: { id: 'item-items' } }
-            ]);
+        let printReport = perceptor.createElement({ element: 'button', attributes: { id: 'print-report', class: 'btn btn-medium' }, text: 'Print Report' });
 
-            container.find('#edit-item-image').addEventListener('click', event => {
-                let uploadImageForm = perceptor.createElement({
-                    element: 'form', attributes: { class: 'single-upload-form' }, children: [
-                        {
-                            element: 'span', attributes: { class: 'single-upload-form-controls' }, children: [
-                                { element: 'input', attributes: { type: 'file', name: 'newImage', id: 'new-image' } },
-                                { element: 'button', attributes: { id: 'upload', class: 'btn btn-small' }, text: 'upload' }
-                            ]
-                        },
-                        {
-                            element: 'img', attributes: { id: 'preview-image' }
-                        }
-                    ]
-                });
+        document.body.find('#main-container-body-main-actions-others').makeElement([
+            {
+                element: 'span', attributes: { id: 'item-controls' }, children: [
+                    { element: 'i', attributes: { class: 'icon fas fa-pen', href: 'reports.html?page=edit&id=' + id } },
+                    { element: 'i', attributes: { class: 'icon fas fa-clone', href: 'reports.html?page=clone&id=' + id } },
+                    { element: 'a', attributes: { class: 'icon fas fa-trash-alt', href: 'reports.html?page=delete&id=' + id } },
+                ]
+            },
+            printReport
+        ]);
 
-                let popUp = perceptor.popUp(uploadImageForm);
+        system.get({ collection: 'reports', query: { _id: id }, changeQuery: { _id: 'objectid' } }).then(result => {
+            let displayReport = (report) => {
+                container.render(report);
+            }
 
-                uploadImageForm.find('#new-image').onChanged(value => {
-                    uploadImageForm.find('#preview-image').src = value.src;
-                });
+            this.renderReport(result.content, displayReport, false);
 
-                uploadImageForm.find('#upload').addEventListener('click', event => {
-                    event.preventDefault();
-                    let data = perceptor.jsonForm(uploadImageForm);
-                    data.action = 'changeItemImage';
-                    data.id = id;
-
-                    system.connect({ data }).then(result => {
-                        if (result == true) {
-                            system.notify({ note: 'Image was successfully uploaded' });
-                            container.find('#editable-image').src = uploadImageForm.find('#preview-image').src;
-                            popUp.remove();
-                        }
-                        else {
-                            system.notify({ note: 'Could not upload Image' });
-                        }
-                    });
-                });
-            });
-
-            container.find('#delete-item-image').addEventListener('click', event => {
-                let data = { action: 'deleteItemImage', id };
-                system.connect({ data }).then(result => {
-                    if (result == true) {
-                        system.notify({ note: 'Image was successfully deleted' });
-                        container.find('#editable-image').src = '';
-                    }
-                    else {
-                        system.notify({ note: 'Could not delete Image' });
-                    }
-                });
+            printReport.addEventListener("click", event => {
+                system.print(container);
             });
         });
     }
 
-    make(form, tasks, id) {
-        let loading = perceptor.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
-
-        let nameTasks = () => {
-            let singleTasks = form.find('#tasks-container').findAll('.single-task');
-            for (let i = 0; i < singleTasks.length; i++) {
-                singleTasks[i].find('.task-id').setAttribute('name', `${singleTasks[i].dataset.name}Id ${i}`);
-                singleTasks[i].find('.task-value').setAttribute('name', `${singleTasks[i].dataset.name}Value ${i}`);
-            }
-        };
-        let table = perceptor.inBetween(form.dataset.target, '$#&{', '}&#$');
-        try {
-            table = JSON.parse(table).collection;
-        } catch (error) {
-            system.notify({ note: "Form's Target is invalid" });
-            return;
+    make(content, id) {
+        let data = { content: JSON.stringify(content), action: 'createReport' };
+        if (perceptor.isset(id)) {
+            data.action = 'editReport';
+            data.id = id;
         }
-        form.find('#add-new-task').addEventListener('click', event => {
-            this.getTask(table, tasks, task => {
-                form.find('#tasks-container').makeElement(task);
-                nameTasks();
-            });
-        });
 
-        form.addEventListener('click', event => {
-            if (event.target.classList.contains('delete-task') && confirm('Task will be deleted')) {
-                event.target.getParents('.single-task').remove();
-            }
-        });
-
-        form.addEventListener('submit', event => {
-            event.preventDefault();
-            let formValidation = perceptor.validateForm(form, { nodeNames: ['INPUT', 'select-element', 'select'] });
-
-            if (!formValidation.flag) {
-                loading.replaceWith(form.getState({ name: 'submit' }));
-                form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `Form ${formValidation.elementName} is faulty` });
-                return;
-            }
-
-            let data = {
-                action: 'createForm',
-                type: form.dataset.type,
-                contents: JSON.stringify(perceptor.jsonForm(form.find('.perceptor-form-contents'))),
-                tasks: {}
-            }
-            let allTasks = form.findAll('.single-task');
-            for (let i = 0; i < allTasks.length; i++) {
-                let { name } = allTasks[i].dataset;
-                data.tasks[name] = data.tasks[name] || [];
-                let _id = allTasks[i].find('.task-id').value;
-                let value = allTasks[i].find('.task-value').value;
-
-                data.tasks[allTasks[i].dataset.name].push({ _id, value });
-            }
-
-            data.tasks = JSON.stringify(data.tasks);
-
-            if (perceptor.isset(id)) {
-                data.action = 'editForm';
-                data.id = id;
-            }
-            // form.getState({ name: 'submit' }).replaceWith(loading);
-            form.setState({ name: 'error', attributes: { style: { display: 'none' } }, text: '' });
-
-            system.connect({ data }).then(result => {
-                // loading.replaceWith(form.getState({ name: 'submit' }));
-                if (result == true) {
-                    if (perceptor.isset(id)) {
-                        system.notify({ note: 'Form Editted' });
-                    }
-                    else {
-                        system.notify({ note: 'Form Created' });
-                    }
-                    window.history.go(-1);
-                }
-                else if (perceptor.isset(result.found)) {
-                    form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `${perceptor.camelCasedToText(result.found).toUpperCase()} is already in use` });
+        system.connect({ data }).then(result => {
+            if (result == true) {
+                if (perceptor.isset(id)) {
+                    system.notify({ note: 'Report Editted' });
                 }
                 else {
-                    form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `Error Unknown` });
+                    system.notify({ note: 'Report Created' });
                 }
-            });
+                window.history.go(-1);
+            }
+            else if (perceptor.isset(result.found)) {
+                form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `${perceptor.camelCasedToText(result.found).toUpperCase()} is already in use` });
+            }
+            else {
+                form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `Error Unknown` });
+            }
         });
     }
 
     edit(container) {
         let id = this.url.vars.id;
-        system.get({ collection: 'forms', query: { _id: id }, changeQuery: { _id: 'objectid' } }).then(result => {
-            let type = result.contents.type;
-            system.get({ collection: 'reportgenerators', query: { _id: type }, changeQuery: { _id: 'objectid' } }).then(selectedReport => {
-                let displayForm = (contents, tasks) => {
-                    for (let i = 0; i < selectedReport.contents.length; i++) {
-                        contents[selectedReport.contents[i].name].attributes.value = result.contents[selectedReport.contents[i].name];
-                    }
+        let saveReport = perceptor.createElement({ element: 'button', attributes: { id: 'save-report', class: 'btn btn-medium' }, text: 'Edit Report' });
+        document.body.find('#main-container-body-main-actions-others').append(saveReport);
 
-                    let editForm = perceptor.createForm({
-                        title: 'Edit ' + selectedReport.title, attributes: { enctype: 'multipart/form-data', id: 'edit-form-form', class: 'form', 'data-type': selectedReport._id, 'data-target': selectedReport.target, style: { border: '1px solid var(--secondary-color)', maxWidth: '100%' } },
-                        contents: contents,
-                        buttons: {
-                            tasks: {
-                                element: 'div', attributes: { id: 'tasks-container', style: { display: 'grid', gap: '1em' } }
-                            },
-                            actions: {
-                                element: 'div', attributes: { style: { display: 'flex' } }, children: [
-                                    { element: 'i', attributes: { id: 'add-new-task', class: 'action', title: 'Add New Task', 'data-icon': perceptor.icons.plus, style: { margin: '1em' } } },
-                                ]
-                            },
-                            submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Edit', state: { name: 'submit', owner: '#edit-form-form' } },
-                        },
-                        columns: 2
-                    });
-                    let target = perceptor.inBetween(selectedReport.target, '$#&{', '}&#$');
-                    try {
-                        target = JSON.parse(target).collection;
-                    } catch (error) {
-                        system.notify({ note: "Form's Target is invalid" });
-                        target = '';
-                    }
+        system.get({ collection: 'reports', query: { _id: id }, changeQuery: { _id: 'objectid' } }).then(result => {
+            let displayReport = (report, data) => {
+                container.render(report);
+                saveReport.data = data;
+            }
 
-                    if (target != '') {
-                        perceptor.runParallel({ ids: system.get({ collection: target, query: {}, projection: { _id: 1 }, many: true }) }, fetched => {
-                            let list = perceptor.object.valueOfObjectArray(fetched.ids, '_id');
-                            list.unshift('Null');
+            this.renderReport(result.content, displayReport);
 
-                            for (let name in result.tasks) {
-                                for (let done of result.tasks[name]) {
-                                    let task = editForm.find('#tasks-container').makeElement(tasks[name]);
-                                    task.find('.task-id').setOptions(list, { selected: done._id });
-                                    task.find('.task-value').value = done.value;
-                                    task.dataset.action = done.action;
-                                }
-                            }
-                        });
-                    }
-
-                    container.render(editForm);
-                    this.make(editForm, tasks, id);
-                };
-
-                this.renderForm(selectedReport, displayForm);
+            saveReport.addEventListener('click', event => {
+                this.make(saveReport.data, id);
             });
         });
     }
 
     clone(container) {
         let id = this.url.vars.id;
-        system.get({ collection: 'forms', query: { _id: id }, changeQuery: { _id: 'objectid' } }).then(result => {
-            let type = result.contents.type;
-            system.get({ collection: 'reportgenerators', query: { _id: type }, changeQuery: { _id: 'objectid' } }).then(selectedReport => {
-                let displayForm = (contents, tasks) => {
-                    for (let i = 0; i < selectedReport.contents.length; i++) {
-                        contents[selectedReport.contents[i].name].attributes.value = result.contents[selectedReport.contents[i].name];
-                    }
+        let saveReport = perceptor.createElement({ element: 'button', attributes: { id: 'save-report', class: 'btn btn-medium' }, text: 'Clone Report' });
+        document.body.find('#main-container-body-main-actions-others').append(saveReport);
 
-                    let cloneForm = perceptor.createForm({
-                        title: 'Clone ' + selectedReport.title, attributes: { enctype: 'multipart/form-data', id: 'clone-form-form', class: 'form', 'data-type': selectedReport._id, 'data-target': selectedReport.target, style: { border: '1px solid var(--secondary-color)', maxWidth: '100%' } },
-                        contents: contents,
-                        buttons: {
-                            tasks: {
-                                element: 'div', attributes: { id: 'tasks-container', style: { display: 'grid', gap: '1em' } }
-                            },
-                            actions: {
-                                element: 'div', attributes: { style: { display: 'flex' } }, children: [
-                                    { element: 'i', attributes: { id: 'add-new-task', class: 'action', title: 'Add New Task', 'data-icon': perceptor.icons.plus, style: { margin: '1em' } } },
-                                ]
-                            },
-                            submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Clone', state: { name: 'submit', owner: '#clone-form-form' } },
-                        },
-                        columns: 2
-                    });
+        system.get({ collection: 'reports', query: { _id: id }, changeQuery: { _id: 'objectid' } }).then(result => {
+            let displayReport = (report, data) => {
+                container.render(report);
+                saveReport.data = data;
+            }
 
-                    container.render(cloneForm);
-                    this.make(cloneForm, tasks);
-                };
+            this.renderReport(result.content, displayReport);
 
-                this.renderForm(selectedReport, displayForm);
+            saveReport.addEventListener('click', event => {
+                this.make(saveReport.data, id);
             });
         });
     }
@@ -438,112 +221,255 @@ class Reports {
         }, result => {
             let reportGenerators = result.reportGenerators;
             let types = perceptor.object.valueOfObjectArray(reportGenerators, 'name');
-            let selectCell = perceptor.cell({ element: 'select', name: 'Form', dataAttributes: {}, options: types });
+            let selectCell = perceptor.cell({ element: 'select', name: 'Report', dataAttributes: {}, options: types });
+            let saveReport = perceptor.createElement({ element: 'button', attributes: { id: 'save-report', class: 'btn btn-medium', style: { display: 'none' } }, text: 'Save Report' });
 
-            document.body.find('#more-forms-controls').append(selectCell);
+            document.body.find('#main-container-body-main-actions-others').append(selectCell, saveReport);
 
-            let selectedReport = perceptor.array.find(reportGenerators, form => {
-                return form.name == types[0];
+            let selectedGenerator = perceptor.array.find(reportGenerators, generator => {
+                return generator.name == types[0];
             });
 
-            let displayForm = (contents, tasks) => {
-                let createForm = perceptor.createForm({
-                    title: 'Create ' + selectedReport.title, attributes: { enctype: 'multipart/form-data', id: 'create-form-form', class: 'form', 'data-type': selectedReport._id, 'data-target': selectedReport.target, style: { border: '1px solid var(--secondary-color)', maxWidth: '100%' } },
-                    contents: contents,
-                    buttons: {
-                        tasks: {
-                            element: 'div', attributes: { id: 'tasks-container', style: { display: 'grid', gap: '1em' } }
-                        },
-                        actions: {
-                            element: 'div', attributes: { style: { display: 'flex' } }, children: [
-                                { element: 'i', attributes: { id: 'add-new-task', class: 'action', title: 'Add New Task', 'data-icon': perceptor.icons.plus, style: { margin: '1em' } } },
-                            ]
-                        },
-                        submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Create', state: { name: 'submit', owner: '#create-form-form' } },
-                    },
-                    columns: 2
-                });
-
-                container.render(createForm);
-                this.make(createForm, tasks);
+            let displayReport = (report, data) => {
+                container.render(report);
+                saveReport.cssRemove(['display']);
+                saveReport.data = data;
             }
 
-            this.renderForm(selectedReport, displayForm);
-            selectCell.find('#Form-cell').onChanged(value => {
-                selectedReport = perceptor.array.find(reportGenerators, form => {
+            selectCell.find('#Report-cell').onChanged(value => {
+                saveReport.css({ display: 'none' });
+                selectedGenerator = perceptor.array.find(reportGenerators, form => {
                     return form.name == value;
                 });
-                this.renderForm(selectedReport, displayForm);
+                this.renderReport(selectedGenerator, displayReport);
+            });
+
+            saveReport.addEventListener('click', event => {
+                this.make(saveReport.data);
             });
         });
     }
 
-    getTask(table, tasks, callback) {
-        let tasksHolder = perceptor.createElement({ element: 'div', attributes: { style: { display: 'block', padding: '4em 2em', cursor: 'pointer' } } });
+    renderReport(data, callback, flag) {
 
-        for (let task in tasks) {
-            tasksHolder.makeElement({ element: 'span', attributes: { class: 'single-task', 'data-name': task, style: { padding: '2em', display: 'inline', margin: '1em', border: '1px solid var(--secondary-color)' } }, text: task })
+        let done = () => {
+            let report = perceptor.createElement({
+                element: 'div', attributes: {
+                    class: 'report-container'
+                }, children: [
+                    {
+                        element: 'span', attributes: { class: 'report-container-title' },
+                        text: data.title
+                    },
+                    { element: 'div', attributes: { id: 'report-window' } }
+                ]
+            });
+            for (let content of data.contents) {
+                this.displayReport(report.find('#report-window'), content);
+            }
+
+            callback(report, data);
         }
 
-        let taskPopup = perceptor.popUp(tasksHolder, { title: 'Pick Task' });
-
-        tasksHolder.addEventListener('dblclick', event => {
-            if (event.target.classList.contains('single-task')) {
-                let count = prompt('How many of this tasks');
-                perceptor.runParallel({ ids: system.get({ collection: table, query: {}, projection: { _id: 1 }, many: true }) }, result => {
-                    let generatedTasks = [];
-                    let list = perceptor.object.valueOfObjectArray(result.ids, '_id');
-                    list.unshift('Null');
-                    for (let i = 0; i < count; i++) {
-                        let task = perceptor.createElement(tasks[event.target.dataset.name]);
-                        task.find('.task-id').setOptions(list)
-                        generatedTasks.push(task);
+        if (perceptor.isset(flag)) {
+            done();
+        }
+        else {
+            this.getGraphsDuration(data.contents, durationed => {//set the durations
+                data.contents = durationed;
+                system.getSources(data.contents, fetched => {
+                    for (let content of data.contents) {
+                        if (perceptor.isset(fetched[content.name])) {
+                            content.fetched = fetched[content.name];
+                        }
                     }
-                    callback(generatedTasks);
-                    taskPopup.remove();
+                    this.getGraphsLabels(data.contents, labelled => {
+                        data.contents = labelled;
+                        done();
+                    });
                 });
-            }
-        });
+            });
+        }
     }
 
-    renderForm(selectedReport, callback) {
-        let contents = {};
-        let tasks = {};
+    displayReport(container, data) {
+        if (data.display == 'Text') {
+            let sources = perceptor.allCombine(data.source, '$#&{', '}&#$');
+            let text = data.source;
 
-        for (let i = 0; i < selectedReport.contents.length; i++) {
-            if (selectedReport.contents[i].source != '') {
-                contents[selectedReport.contents[i].name] = { element: 'select-element', attributes: { name: selectedReport.contents[i].name, 'data-action': selectedReport.contents[i].action }, source: selectedReport.contents[i].source };
+            for (let i = 0; i < sources.length; i++) {
+                text = text.replace(sources[i], data.fetched[i]);
             }
-            else {
-                contents[selectedReport.contents[i].name] = { element: 'input', attributes: { type: selectedReport.contents[i].type, name: selectedReport.contents[i].name } };
-            }
-        }
 
-        for (let i = 0; i < selectedReport.tasks.length; i++) {
-            tasks[selectedReport.tasks[i].name] = {
-                element: 'span', attributes: { class: 'single-task', 'data-name': selectedReport.tasks[i].name, 'data-action': selectedReport.tasks[i].action, style: { display: 'grid', gap: '1em', gridTemplateColumns: '1fr repeat(3, max-content)', border: '1px solid var(--secondary-color)', padding: '1em', alignItems: 'center' } }, children: [
-                    { element: 'p', attributes: { class: 'task-name' }, text: selectedReport.tasks[i].name },
-                    { element: 'select', attributes: { class: 'task-id' } },
-                    { element: 'input', attributes: { class: 'task-value' } },
-                    { element: 'i', attributes: { 'data-icon': 'fas, fa-trash', class: 'delete-task', title: 'Delete Task', style: { cursor: 'pointer' } } }
+            container.makeElement({
+                element: 'div', attributes: { class: 'report-single' }, children: [
+                    { element: 'h2', attributes: { class: 'report-single-title' }, text: data.title },
+                    { element: 'p', attributes: { class: 'text-report report-single-content' }, text }
                 ]
+            });
+        }
+        else if (data.display == 'Table') {
+            let contents = [];
+            for (let i = 0; i < data.fetched.length; i++) {
+                contents = contents.concat(data.fetched[i]);
+            }
+            let table = perceptor.createTable({ title: data.title, contents });
+            container.append(table)
+        }
+        else if (data.display == 'List') {
+            let contents = [];
+            for (let i = 0; i < data.fetched.length; i++) {
+                contents = contents.concat(data.fetched[i]);
+            }
+            container.makeElement({
+                element: 'div', attributes: { class: 'list-report report-single-content' }, children: [
+                    { element: 'h2', attributes: { class: 'report-single-title' }, text: data.title },
+                    { element: 'span', attributes: { class: 'list-report-content' } }
+                ]
+            });
+
+            for (let text of contents) {
+                container.find('.list-report-content').makeElement({
+                    element: 'span', attributes: { class: 'list-report-item' }, children: [
+                        { element: 'i', attributes: { class: 'list-report-item-bullet', 'data-icon': 'fas, fa-arrow-right' } },
+                        { element: 'a', attributes: { class: 'list-report-item-value' }, text }
+                    ]
+                });
             }
         }
+        else if (data.display.includes('Graph') || data.display.includes('Chart')) {
+            let contents = [];
 
-        perceptor.getSources(selectedReport.contents, fetched => {
-            for (let name in contents) {
-                if (contents[name].source != '') {
-                    delete contents[name].source;
-                    contents[name].attributes.contents = [];
-                    for (let i = 0; i < fetched[name].length; i++) {
-                        contents[name].attributes.contents = contents[name].attributes.contents.concat(fetched[name][i]);
-                    }
-                    contents[name].attributes.contents = JSON.stringify(contents[name].attributes.contents);
+            for (let i = 0; i < data.fetched.length; i++) {
+                contents = contents.concat(data.fetched[i]);
+            }
+            let type;
+            if (data.display == 'Pie Chart') type = 'pie';
+            else if (data.display == 'Bar Graph') type = 'bar';
+            else if (data.display == 'Line Graph') type = 'line';
+
+            system.plot({ type, data: contents, title: data.title, labels: data.labels }, (canvas, plotted) => {
+                container.makeElement({
+                    element: 'div', attributes: { class: 'report-single-content' }, children: [
+                        canvas
+                    ]
+                });
+                canvas.css({ width: '60vw' });
+            });
+        }
+    }
+
+    getGraphsDuration(contents, callback) {
+        let details = perceptor.createElement({ element: 'div', attributes: { class: 'graph-details' } });
+
+        for (let con of contents) {
+            if (con.display.includes('Graph') || con.display.includes('Chart')) {
+                let single = details.makeElement({
+                    element: 'div', attributes: { class: 'graph-details-single' }, children: [
+                        { element: 'h2', attributes: { class: 'graph-details-single-name' }, text: con.name },
+                        {
+                            element: 'div', attributes: { class: 'graph-details-single-content' }, children: [
+                                {
+                                    element: 'span', attributes: { class: 'graph-details-single-duration-start' }, children: [
+                                        { element: 'label', attributes: { class: 'graph-details-single-duration-start-label' }, text: 'Start' },
+                                        { element: 'input', attributes: { class: 'graph-details-single-duration-start-date', type: 'date', id: `${con.name}-start-date` } },
+                                        { element: 'input', attributes: { class: 'graph-details-single-duration-start-time', type: 'time', id: `${con.name}-start-time` } }
+                                    ]
+                                },
+                                {
+                                    element: 'span', attributes: { class: 'graph-details-single-duration-end' }, children: [
+                                        { element: 'label', attributes: { class: 'graph-details-single-duration-end-label' }, text: 'End' },
+                                        { element: 'input', attributes: { class: 'graph-details-single-duration-end-date', type: 'date', id: `${con.name}-end-date` } },
+                                        { element: 'input', attributes: { class: 'graph-details-single-duration-end-time', type: 'time', id: `${con.name}-end-time` } }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                });
+
+                if (perceptor.isset(con.duration)) {
+                    single.find(`#${con.name}-start-date`).value = con.duration.startDate;
+                    single.find(`#${con.name}-start-time`).value = con.duration.startTime;
+                    single.find(`#${con.name}-end-date`).value = con.duration.endDate;
+                    single.find(`#${con.name}-end-time`).value = con.duration.endTime;
                 }
             }
+        }
 
-            callback(contents, tasks);
-        });
+        let popUp = perceptor.popUp(details, { title: 'Set Durtions for Report Graphs' });
+        popUp.find('#toggle-window').click();
+
+        if (contents.length) {
+            let submit = details.makeElement({ element: 'button', attributes: { class: 'btn btn-medium', id: 'set-graph-details' }, text: 'Set Durations' });
+
+            let data = {}
+            submit.addEventListener('click', event => {
+                for (let i in contents) {
+                    contents[i].duration = {
+                        startDate: details.find(`#${contents[i].name}-start-date`).value,
+                        startTime: details.find(`#${contents[i].name}-start-time`).value,
+                        endDate: details.find(`#${contents[i].name}-end-date`).value,
+                        endTime: details.find(`#${contents[i].name}-end-time`).value
+                    };
+                }
+                callback(contents);
+                popUp.remove();
+            });
+        }
+        else {
+            callback(contents);
+            popUp.remove();
+        }
+    }
+
+    getGraphsLabels(contents, callback) {
+        let details = perceptor.createElement({ element: 'div', attributes: { class: 'graph-details' } });
+
+        for (let con of contents) {
+            if (con.display.includes('Graph') || con.display.includes('Chart')) {
+                let single = details.makeElement({
+                    element: 'div', attributes: { class: 'graph-details-single' }, children: [
+                        { element: 'h2', attributes: { class: 'graph-details-single-name' }, text: con.name }
+                    ]
+                });
+
+                let length = 0;
+
+                for (let f of con.fetched) {
+                    if (length < f.length) length = f.length;
+                }
+                single.makeElement({
+                    element: 'div', attributes: { class: 'graph-details-single-content' }, children: [
+                        { element: 'span', attributes: { class: 'graph-details-single-label-note' }, text: `Set ${length} ',' seperated labels` },
+                        { element: 'input', attributes: { class: `graph-details-single-label-data`, id: `${con.name}-label` } }
+                    ]
+                });
+
+                if (perceptor.isset(con.labels)) {
+                    single.find(`#${con.name}-label`).value = con.labels.join(',');
+                }
+            }
+        }
+
+        let popUp = perceptor.popUp(details, { title: 'Set Labels for Report Graphs' });
+        popUp.find('#toggle-window').click();
+
+        if (contents.length) {
+            let submit = details.makeElement({ element: 'button', attributes: { class: 'btn btn-medium', id: 'set-graph-details' }, text: 'Set Labels' });
+
+            submit.addEventListener('click', event => {
+                for (let i in contents) {
+                    contents[i].labels = details.find(`#${contents[i].name}-label`).value.split(',');
+                }
+                callback(contents);
+                popUp.remove();
+            });
+        }
+        else {
+            callback(contents);
+            popUp.remove();
+        }
     }
 
     delete() {
@@ -553,7 +479,7 @@ class Reports {
                 system.redirect(location + '/reports.html?page=view');
             });
         } else {
-            system.redirect(location + '/reports.html?page=view');
+            window.history.go(-1);
         }
     }
 }

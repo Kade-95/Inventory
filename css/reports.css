@@ -65,3 +65,52 @@
 }
 
 .graph-report {}
+
+.graph-details{
+    display: grid;
+    gap: 1em;
+    height: max-content;
+    width: var(--match-parent);
+    padding: .5em;
+}
+
+.graph-details-single{
+    display: grid;
+    gap: .3em;
+    padding: 0em .3em;
+    border: 1px solid var(--secondary-color);
+    border-radius: 10px;
+    padding: .5em;
+    width: var(--match-parent);
+}
+
+.graph-details-single-name{
+    font-size: 1.2em;
+    text-transform: uppercase;
+    text-decoration: underline;
+}
+
+.graph-details-single-content{
+    display: grid;
+    gap: .1em;
+    width: max-content;
+}
+
+.graph-details-single-label, .graph-details-single-duration{
+    display: grid;
+    gap: .2em;
+    width: max-content;
+}
+
+.graph-details-single-duration-start, .graph-details-single-duration-end{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .2em;
+    align-items: center;
+    padding: 0em 10px;
+}
+
+.graph-details #set-graph-details{
+    width: max-content;
+    justify-self: flex-end;
+}

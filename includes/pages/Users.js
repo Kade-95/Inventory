@@ -94,7 +94,7 @@ class Users {
             for (let i in result) {
                 result[i].status = 'Offline';
             }
-            let usersTable = perceptor.createTable({ title: 'Users Table', contents: result, search: true, sort: true, filter: ['All', 'Online', 'Offline', 'Admin', 'Staff'], hide: ['_id']});
+            let usersTable = perceptor.createTable({ title: 'Users Table', contents: result, search: true, sort: true, filter: ['All', 'Online', 'Offline', 'Admin', 'Staff'], projection: {email: -1}});
             container.render(usersTable);
 
             let usersStatus = {};

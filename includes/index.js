@@ -5,7 +5,6 @@ import * as chart from './Chart.js';
 window.perceptor = new Perceptor();
 window.system = {};
 let resume, codeshop, portfolio, about, contact, blog, cart;
-let smallScreen = window.matchMedia("(min-width: 700px)");
 const app = new App();
 let viewSet = false;
 window.log = console.log;
@@ -18,7 +17,6 @@ function setupView(user) {
 
     if (perceptor.isset(user) && user != 'undefined') {
         system.get({ collection: 'views', query: { owner: user } }).then(myView => {
-
             if (perceptor.isnull(myView)) {
                 system.connect({ data: { action: 'saveView', view: JSON.stringify(view) } });
             }
@@ -38,7 +36,7 @@ function setupView(user) {
 
 function route() {
     document.body.removeChildren({ except: ['#main-notifications', '#open-notifications'] });
-    let user = document.body.dataset.user;    
+    let user = document.body.dataset.user;
     if (!viewSet) {
         setupView(user);
     }
@@ -229,7 +227,10 @@ function toggleNotifications() {
     });
 }
 
-system.redirect = url => {    
+system.smallScreen = window.matchMedia("(min-width: 700px)");
+system.realSmallScreen = window.matchMedia("(min-width: 500px)");
+
+system.redirect = url => {
     window.history.pushState('page', 'title', perceptor.api.prepareUrl(url));
     route();
 }
@@ -407,9 +408,7 @@ system.plot = (params, callback) => {
         return getting;
     }
 
-    let labels = getLabels(params.data.length);
-    console.log(labels, params.data);
-
+    let labels = params.labels || getLabels(params.data.length);
     let myChart = new Chart(ctx, {
         type: params.type,
         data: {
@@ -1007,17 +1006,17 @@ system.setSources = (callback) => {
                 return data;
             },
 
-            date: ()=>{
+            date: () => {
                 let children = [];
-                for(let source of data.source){
+                for (let source of data.source) {
                     console.log(source);
-                    
+
                 }
                 data.children = children;
                 return data;
             },
 
-            beforeDate: ()=>{
+            beforeDate: () => {
                 let children = [];
                 for (let child of data.children) {
                     if (child.timeCreated >= filterData.value) {
@@ -1029,7 +1028,7 @@ system.setSources = (callback) => {
                 return data;
             },
 
-            afterDate: ()=>{
+            afterDate: () => {
 
             }
         }
@@ -1097,7 +1096,8 @@ system.getSources = (data, callback) => {
         projection,
         contentName,
         runSources = {},
-        content;
+        content,
+        duration;
 
     for (let i in data) {
         content = data[i];
@@ -1115,8 +1115,7 @@ system.getSources = (data, callback) => {
                     if (!perceptor.isset(item)) {
                         find = JSON.stringify({ contentName, position, name, filter });
                         if (perceptor.isset(name)) {
-                            projection = { _id: 0 };
-                            projection[name] = 1;
+                            projection = { _id: 0, [name]: 1, timeCreated: 1, lastModified: 1 };
                             runSources[find] = system.get({ collection, query: {}, projection, many: true });
                         }
                         else {
@@ -1136,6 +1135,7 @@ system.getSources = (data, callback) => {
 
     perceptor.runParallel(runSources, results => {
         let source, content;
+
         for (let i in results) {
             source = JSON.parse(i);
             contentName = source.contentName;
@@ -1143,21 +1143,24 @@ system.getSources = (data, callback) => {
             name = source.name;
             position = source.position;
             filter = source.filter;
+            duration = perceptor.array.find(data, d => {
+                return d.name == contentName;
+            }).duration;
 
             if (!perceptor.isset(item)) {
                 if (perceptor.isset(name)) {
-                    content = perceptor.object.valueOfObjectArray(system.runFilters(results[i], filter), name);
+                    content = perceptor.object.valueOfObjectArray(system.runFilters(results[i], filter, duration), name);
                 }
                 else {
-                    content = system.runFilters(results[i], filter);
+                    content = system.runFilters(results[i], filter, duration);
                 }
             }
             else {
                 if (perceptor.isset(name)) {
-                    content = perceptor.object.valueOfObjectArray(system.runFilters(results[i].contents, filter), name);
+                    content = perceptor.object.valueOfObjectArray(system.runFilters(results[i].contents, filter, duration), name);
                 }
                 else {
-                    content = system.runFilters(results[i].contents, filter);
+                    content = system.runFilters(results[i].contents, filter, duration);
                 }
             }
 
@@ -1175,8 +1178,9 @@ system.getSources = (data, callback) => {
     });
 }
 
-system.runFilters = (contents, filters) => {
-    let filterData, action;
+system.runFilters = (contents, filters, duration) => {
+    let filterData, action, start, end, moment;
+
     let run = {
         equals: () => {
             let children = [];
@@ -1307,6 +1311,45 @@ system.runFilters = (contents, filters) => {
         }
     }
 
+    let checkDuration = () => {
+        let duplicate = [];
+        if (perceptor.isset(duration.startDate) && duration.startDate != '') {
+            start = perceptor.secondsTillDate(duration.startDate);
+            if (perceptor.isset(duration.startTime) && duration.startTime != '') {
+                if (perceptor.isTimeValid(duration.startTime)) {
+                    start = Math.floor(start) + perceptor.isTimeValid(duration.startTime);
+                }
+            }
+        }
+
+        if (perceptor.isset(duration.endDate) && duration.endDate != '') {
+            end = perceptor.secondsTillDate(duration.endDate);
+            if (perceptor.isset(duration.endTime) && duration.endTime != '') {
+                if (perceptor.isTimeValid(duration.endTime)) {
+                    end = Math.floor(end) + perceptor.isTimeValid(duration.endTime);
+                }
+            }
+        }
+
+        if (!perceptor.isset(start) && !perceptor.isset(end)) {
+            return contents;
+        }
+
+        for (let con of contents) {
+            moment = perceptor.secondsTillMoment(con.timeCreated);
+            if (perceptor.isset(start) && start <= moment) {
+                duplicate.push(con);
+            }
+
+            if (perceptor.isset(end) && end >= moment) {
+                duplicate.push(con);
+            }
+        }
+
+        return duplicate;
+    }
+
+    contents = checkDuration();
     if (perceptor.isset(filters)) {
         for (let data of filters) {
             filterData = data;
@@ -1316,6 +1359,17 @@ system.runFilters = (contents, filters) => {
     }
 
     return contents;
+}
+
+system.print = (element) => {
+    let content = document.body.innerHTML;
+    document.body.render(element);
+    window.onafterprint = () => {
+        document.body.innerHTML = content;
+        system.reload();
+    }
+
+    window.print();
 }
 
 document.addEventListener('DOMContentLoaded', event => {

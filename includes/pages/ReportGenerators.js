@@ -128,29 +128,36 @@ let reportGenerators = (mainBody) => {
             system.notify({ note: 'Please add some data to preview' });
             return;
         }
+        getGraphsDuration(data.contents, durationed => {//set the durations
+            data.contents = durationed;
+            system.getSources(data.contents, fetched => {
+                let report = perceptor.createElement({
+                    element: 'div', attributes: {
+                        class: 'report-container'
+                    }, children: [
+                        {
+                            element: 'span', attributes: { class: 'report-container-title' },
+                            text: data.title
+                        },
+                        { element: 'div', attributes: { id: 'report-window' } }
+                    ]
+                });
 
-        system.getSources(data.contents, fetched => {
-            let report = perceptor.createElement({
-                element: 'div', attributes: {
-                    class: 'report-container'
-                }, children: [
-                    {
-                        element: 'span', attributes: { class: 'report-container-title' },
-                        text: data.title
-                    },
-                    { element: 'div', attributes: { id: 'report-window' } }
-                ]
-            });
-
-            let reportPopup = perceptor.popUp(report);
-            reportPopup.find('#toggle-window').click();
-            for (let content of data.contents) {
-                if (perceptor.isset(fetched[content.name])) {
-                    content.fetched = fetched[content.name];
+                for (let content of data.contents) {
+                    if (perceptor.isset(fetched[content.name])) {
+                        content.fetched = fetched[content.name];
+                    }
                 }
+                getGraphsLabels(data.contents, labelled => {
+                    data.contents = labelled;
 
-                displayReport(report.find('#report-window'), content);
-            }
+                    let reportPopup = perceptor.popUp(report);
+                    reportPopup.find('#toggle-window').click();
+                    for (let content of data.contents) {
+                        displayReport(report.find('#report-window'), content);
+                    }
+                });
+            });
         });
     }
 
@@ -210,7 +217,7 @@ let reportGenerators = (mainBody) => {
             else if (data.display == 'Bar Graph') type = 'bar';
             else if (data.display == 'Line Graph') type = 'line';
 
-            system.plot({ type, data: contents, title: data.title }, (canvas, plotted) => {
+            system.plot({ type, data: contents, title: data.title, labels: data.labels }, (canvas, plotted) => {
                 container.makeElement({
                     element: 'div', attributes: { class: 'report-single-content' }, children: [
                         canvas
@@ -218,6 +225,112 @@ let reportGenerators = (mainBody) => {
                 });
                 canvas.css({ width: '60vw' });
             });
+        }
+    }
+
+    let getGraphsDuration = (contents, callback) => {
+        let details = perceptor.createElement({ element: 'div', attributes: { class: 'graph-details' } });
+
+        for (let con of contents) {
+            if (con.display.includes('Graph') || con.display.includes('Chart')) {
+                let single = details.makeElement({
+                    element: 'div', attributes: { class: 'graph-details-single' }, children: [
+                        { element: 'h2', attributes: { class: 'graph-details-single-name' }, text: con.name },
+                        {
+                            element: 'div', attributes: { class: 'graph-details-single-content' }, children: [
+                                {
+                                    element: 'span', attributes: { class: 'graph-details-single-duration-start' }, children: [
+                                        { element: 'label', attributes: { class: 'graph-details-single-duration-start-label' }, text: 'Start' },
+                                        { element: 'input', attributes: { class: 'graph-details-single-duration-start-date', type: 'date', id: `${con.name}-start-date` } },
+                                        { element: 'input', attributes: { class: 'graph-details-single-duration-start-time', type: 'time', id: `${con.name}-start-time` } }
+                                    ]
+                                },
+                                {
+                                    element: 'span', attributes: { class: 'graph-details-single-duration-end' }, children: [
+                                        { element: 'label', attributes: { class: 'graph-details-single-duration-end-label' }, text: 'End' },
+                                        { element: 'input', attributes: { class: 'graph-details-single-duration-end-date', type: 'date', id: `${con.name}-end-date` } },
+                                        { element: 'input', attributes: { class: 'graph-details-single-duration-end-time', type: 'time', id: `${con.name}-end-time` } }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                });
+            }
+        }
+
+        let popUp = perceptor.popUp(details, { title: 'Set Durtions for Report Graphs' });
+        popUp.find('#toggle-window').click();
+
+        if (contents.length) {
+            let submit = details.makeElement({ element: 'button', attributes: { class: 'btn btn-medium', id: 'set-graph-details' }, text: 'Set Durations' });
+
+            let data = {}
+            submit.addEventListener('click', event => {
+                for (let i in contents) {
+                    contents[i].duration = {
+                        startDate: details.find(`#${contents[i].name}-start-date`).value,
+                        startTime: details.find(`#${contents[i].name}-start-time`).value,
+                        endDate: details.find(`#${contents[i].name}-end-date`).value,
+                        endTime: details.find(`#${contents[i].name}-end-time`).value
+                    };
+                }
+                callback(contents);
+                popUp.remove();
+            });
+        }
+        else {
+            callback(contents);
+            popUp.remove();
+        }
+    }
+
+    let getGraphsLabels = (contents, callback) => {
+        let details = perceptor.createElement({ element: 'div', attributes: { class: 'graph-details' } });
+
+        for (let con of contents) {
+            if (con.display.includes('Graph') || con.display.includes('Chart')) {
+                let single = details.makeElement({
+                    element: 'div', attributes: { class: 'graph-details-single' }, children: [
+                        { element: 'h2', attributes: { class: 'graph-details-single-name' }, text: con.name }
+                    ]
+                });
+
+                let length = 0;
+
+                for (let f of con.fetched) {
+                    if (length < f.length) length = f.length;
+                }
+                single.makeElement({
+                    element: 'div', attributes: { class: 'graph-details-single-content' }, children: [
+                        { element: 'span', attributes: { class: 'graph-details-single-label-note' }, text: `Set ${length} ',' seperated labels` },
+                        { element: 'input', attributes: { class: `graph-details-single-label-data ${con.name}-label` } }
+                    ]
+                });
+            }
+        }
+
+        let popUp = perceptor.popUp(details, { title: 'Set Labels for Report Graphs' });
+        popUp.find('#toggle-window').click();
+
+        if (contents.length) {
+            let submit = details.makeElement({ element: 'button', attributes: { class: 'btn btn-medium', id: 'set-graph-details' }, text: 'Set Labels' });
+
+            submit.addEventListener('click', event => {
+                for (let i in contents) {
+                    contents[i].labels = [];
+                    let labels = details.findAll(`.${contents[i].name}-label`);
+                    for (let j = 0; j < labels.length; j++) {
+                        contents[i].labels.push(labels[j].value.split(','));
+                    }
+                }
+                callback(contents);
+                popUp.remove();
+            });
+        }
+        else {
+            callback(contents);
+            popUp.remove();
         }
     }
 

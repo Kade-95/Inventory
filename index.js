@@ -20,6 +20,7 @@ let metadata = {
         './css/items.css',
         './css/forms.css',
         './css/reports.css',
+        './css/history.css',
         './css/lists.css',
         './css/views.css',
         './css/sources.css',
@@ -56,13 +57,16 @@ function setup() {
 
         });
 }
+let { port, protocol } = perceptor.getCommands('-');
+port = port || 8080;
+protocol = protocol || 'http';
 
 setup()
     .then(() => {
-        perceptor.createServer(8080,
+        perceptor.createServer(port,
             params => {
                 view.createView(params);
-            }, 'http',
+            }, protocol,
             { origins: ['*'] },
             {
                 key: fs.readFileSync('./permissions/server.key'),
@@ -75,5 +79,3 @@ perceptor.recordSession(24 * 60 * 60 * 1000);
 perceptor.handleRequests = (req, res, form) => {
     postHandler.act(req, res, form);
 }
-
-console.log(perceptor.getCommands('-'))

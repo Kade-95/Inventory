@@ -39,14 +39,14 @@
     width: var(--fill-parent);
 }
 
-#landed{
+#landed {
     width: var(--match-parent);
     height: var(--fill-parent);
     display: grid;
     overflow: hidden;
 }
 
-#main-container{
+#main-container {
     padding: 1em 0em;
     display: grid;
     grid-template-rows: max-content 1fr;
@@ -54,21 +54,21 @@
     overflow: hidden;
 }
 
-#main-container-header{
+#main-container-header {
     display: grid;
     grid-gap: .3em;
     padding: .3em 1em;
     align-items: center;
 }
 
-#main-container-header-nav{
+#main-container-header-nav {
     display: grid;
     grid-template-columns: repeat(2, max-content) 1fr;
     grid-gap: .5em;
     align-items: center;
 }
 
-#open-side-bar, #reload-page{
+#open-side-bar, #reload-page {
     cursor: pointer;
     border-radius: 100%;
     display: flex;
@@ -77,19 +77,19 @@
     padding: .5em;
 }
 
-#open-side-bar:hover, #reload-page:hover{
+#open-side-bar:hover, #reload-page:hover {
     background-color: var(--secondary-color);
     color: var(--accient-color);
 }
 
-#current-page-name{
+#current-page-name {
     text-transform: uppercase;
     font-size: 1.2em;
     font-weight: bolder;
     font-family: monospace;
 }
 
-#search{
+#search {
     display: grid;
     grid-template-columns: 1fr min-content;
     align-items: center;
@@ -102,17 +102,17 @@
     width: var(--fill-parent);
 }
 
-#search-box{
+#search-box {
     outline: none;
     border: none;
     height: 50px;
 }
 
-#search-button{
+#search-button {
     cursor: pointer;
 }
 
-#main-container-body{
+#main-container-body {
     display: grid;
     grid-template-rows: max-content 1fr;
     width: var(--fill-parent);
@@ -121,7 +121,7 @@
     overflow: hidden;
 }
 
-#main-container-body-main-actions{
+#main-container-body-main-actions {
     display: grid;
     grid-template-columns: max-content 1fr;
     grid-gap: 1em;
@@ -131,7 +131,15 @@
     border-bottom: 1px solid rgba(0, 0, 0, .1);
 }
 
-#main-container-body-main-window{
+#main-container-body-main-actions-others {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .5em;
+    border-bottom: 1px solid rgba(0, 0, 0, .1);
+}
+
+#main-container-body-main-window {
     display: grid;
     width: var(--match-parent);
     height: var(--fill-parent);
@@ -156,16 +164,13 @@
     #landing {
         grid-template-columns: repeat(2, 1fr);
     }
-
     #landed {
         grid-template-columns: max-content 1fr;
     }
-
     #main-banner {
         display: unset;
     }
-
-    #main-container-header{
+    #main-container-header {
         grid-template-columns: repeat(2, 1fr);
     }
 }

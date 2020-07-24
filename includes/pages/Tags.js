@@ -23,7 +23,7 @@ let tags = (mainBody) => {
                         },
                         {
                             element: 'span', attributes: { id: 'tag-other-details' }, children: [
-                                system.redirect('tag-image', tag.image)
+                                system.editableImage('tag-image', tag.image)
                             ]
                         }
                     ]
@@ -100,7 +100,7 @@ let tags = (mainBody) => {
                 title: 'Clone Tag', attributes: { enctype: 'multipart/form-data', id: 'clone-tag-form', class: 'form' },
                 contents: {
                     name: { element: 'input', attributes: { id: 'name', name: 'name', value: tag.name } },
-                    image: { element: 'input', attributes: { id: 'image', name: 'image', type: 'file' } },
+                    image: { element: 'input', attributes: { id: 'image', name: 'image', type: 'file', ignore: true } },
                 },
                 buttons: {
                     submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Clone', state: { name: 'submit', owner: '#clone-tag-form' } },
@@ -117,7 +117,7 @@ let tags = (mainBody) => {
         let editForm = perceptor.createForm({
             title: 'Edit Tag', attributes: { enctype: 'multipart/form-data', id: 'edit-tag-form', class: 'form' },
             contents: {
-                name: { element: 'input', attributes: { id: 'name', name: 'name', value: tag.name } },
+                name: { element: 'input', attributes: { id: 'name', name: 'name', value: tag.name, ignore: true } },
             },
             buttons: {
                 submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Edit', state: { name: 'submit', owner: '#edit-tag-form' } },
@@ -143,7 +143,7 @@ let tags = (mainBody) => {
             system.connect({ data }).then(result => {
                 if (result == 1) {
                     system.notify({ note: 'Tag Editted' });
-                    reload();
+                    system.reload();
                 }
                 else if (result.found == 'name') {
                     system.notify({ note: 'Tag already in exists' });
@@ -161,7 +161,7 @@ let tags = (mainBody) => {
             title: 'Create Tag', attributes: { enctype: 'multipart/form-data', id: 'create-tag-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name' } },
-                image: { element: 'input', attributes: { id: 'image', name: 'image', type: 'file' } },
+                image: { element: 'input', attributes: { id: 'image', name: 'image', type: 'file', ignore: true } },
             },
             buttons: {
                 submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Create', state: { name: 'submit', owner: '#create-tag-form' } },
@@ -197,7 +197,7 @@ let tags = (mainBody) => {
             system.connect({ data }).then(result => {
                 if (result == 1) {
                     system.notify({ note: 'Tag Created' });
-                    reload();
+                    system.reload();
                 }
                 else if (result.found == 'name') {
                     system.notify({ note: 'Tag already in exists' });

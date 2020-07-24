@@ -4,11 +4,14 @@ import { Items } from './Items.js';
 import { Settings } from './Settings.js';
 import { Forms } from './Forms.js';
 import { Reports } from './Reports.js';
+import { History } from './History.js';
+
 const dashboard = new Dashboard();
 const users = new Users();
 const items = new Items();
 const forms = new Forms();
 const reports = new Reports();
+const _history = new History();
 const settings = new Settings();
 class App {
     constructor() {
@@ -185,6 +188,9 @@ class App {
         else if (pathname == '/reports.html') {
             reports.display();
         }
+        else if (pathname == '/history.html') {
+            _history.display();
+        }
         else if (pathname == '/profile.html') {
             this.profile();
         }
@@ -292,7 +298,7 @@ class App {
                                                         element: 'p', attributes: { class: 'show-user-work-detail-single' }, children: [
                                                             { element: 'i', attributes: { class: 'icon fas fa-money-bill' } },
                                                             { element: 'p', attributes: { class: 'show-user-work-detail-single-name' }, text: 'Salary' },
-                                                            { element: 'p', attributes: { class: 'show-user-work-detail-single-value' }, text: '$' + perceptor.addCommaToMoney(result.salary) }
+                                                            { element: 'p', attributes: { class: 'show-user-work-detail-single-value' }, text: '$' + perceptor.addCommaToMoney(result.salary || 0) }
                                                         ]
                                                     },
                                                 ]
