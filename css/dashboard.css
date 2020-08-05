@@ -1,10 +1,16 @@
-#dashboard-details{
+#dashboard-window {
+    overflow: auto;
+    display: grid;
+    height: var(--fill-parent);
+}
+
+#dashboard-details {
     display: grid;
     grid-gap: 1em;
     padding: 1em;
 }
 
-.dashboard-tile{
+.dashboard-tile {
     display: grid;
     grid-template-rows: 1fr max-content;
     grid-gap: 3em;
@@ -12,7 +18,7 @@
     padding: 1em;
 }
 
-.dashboard-tile-title{
+.dashboard-tile-title {
     font-size: 1.5em;
     display: flex;
     justify-content: space-between;
@@ -21,19 +27,77 @@
     text-transform: uppercase;
 }
 
-.dashboard-tile-stats{
+.dashboard-tile-stats {
     display: flex;
     justify-content: space-between;
 }
 
-.dashboard-tile-stats-title{
+.dashboard-tile-stats-title {
     display: grid;
     grid-template-columns: repeat(2, max-content);
     grid-gap: .2em;
 }
 
-@media(min-width: 700px){
-    #dashboard-details{
-        grid-template-columns: repeat(3, 1fr);
+#dashboard-other-details {
+    display: grid;
+    gap: 1em;
+    padding: 1em;
+}
+
+#dashboard-list {
+    display: grid;
+    gap: .5em;
+    border: 1px solid var(--secondary-color);
+    padding: 1em .3em;
+    height: max-content;
+}
+
+.dashboard-list-item {
+    display: grid;
+    grid-template-columns: 1fr max-content;
+    padding: 1em;
+    border: 1px solid var(--secondary-color);
+}
+
+#dashboard-notifications{
+    display: grid;
+    gap: .5em;
+    border: 1px solid var(--secondary-color);
+    padding: 1em .3em;
+    height: max-content;
+    align-items: flex-end;
+    max-height: 300px;
+    overflow: auto;
+}
+
+.dashboard-notification-item {
+    display: grid;
+    grid-template-columns: 1fr min-content;
+    grid-template-rows: min-content min-content;
+    padding: 1em;
+    gap: .5em;
+    border: 1px solid var(--secondary-color);
+    height: max-content;
+    align-items: center;
+    align-self: flex-start;
+}
+
+.dashboard-notification-item-title, .dashboard-notification-item-message {
+    overflow: hidden;
+}
+
+@media(min-width: 700px) {
+    #dashboard-details {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    #dashboard-other-details {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+    }
+}
+
+@media(min-width: 1000px) {
+    #dashboard-details {
+        grid-template-columns: repeat(4, 1fr);
     }
 }

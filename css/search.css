@@ -1,0 +1,109 @@
+#search-window {
+    display: grid;
+    gap: 1em;
+    grid-template-rows: max-content 1fr;
+    width: var(--match-parent);
+    padding: .5em 1em;
+}
+
+#search {
+    display: grid;
+    grid-template-columns: 1fr min-content;
+    align-items: center;
+    grid-gap: 1em;
+    border: 1px solid var(--secondary-color);
+    border-radius: 10px;
+    padding: .1em;
+    font-size: 1.2em;
+    justify-self: flex-end;
+    width: var(--fill-parent);
+}
+
+#search-box {
+    outline: none;
+    border: none;
+    height: 50px;
+}
+
+#search-button, #open-search {
+    cursor: pointer;
+    border-radius: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: .5em;
+}
+
+#open-search:hover {
+    background-color: var(--secondary-color);
+    color: var(--accient-color);
+}
+
+#found {
+    display: grid;
+    gap: 1em;
+    grid-template-rows: max-content 1fr;
+}
+
+#found-menu {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    justify-content: space-evenly;
+    border: 1px solid var(--secondary-color);
+}
+
+.found-menu-item {
+    padding: .3em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.found-menu-item:hover, .found-menu-item.active {
+    color: var(--accient-color);
+    background-color: var(--secondary-color);
+}
+
+#found-window {
+    display: block;
+}
+
+.found-window-item {
+    display: none;
+    padding: .3em;
+    justify-content: center;
+}
+
+.found-window-item.active {
+    display: block;
+}
+
+.found-item {
+    display: inline-grid;
+    background-color: var(--secondary-color);
+    color: var(--primary-color);
+    margin: 1em;
+    align-self: flex-start;
+}
+
+.found-item:hover {
+    color: var(--accient-color);
+    box-shadow: 3px 3px 10px var(--light-accient-color);
+}
+
+.found-item-image {
+    width: 100px;
+    height: 100px;
+    margin: .3em;
+}
+
+.found-item-name {
+    color: inherit;
+    border-top: 1px solid var(--accient-color);
+    display: flex;
+    padding: .3em;
+    align-items: center;
+    justify-content: center;
+    text-transform: capitalize;
+}

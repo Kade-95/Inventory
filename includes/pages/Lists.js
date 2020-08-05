@@ -1,7 +1,7 @@
 let lists = (mainBody) => {
     let settingsMainWindow = mainBody.find('#settings-main-window');
-    let loading = perceptor.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
-    let urlVars = perceptor.urlSplitter(location.href).vars;
+    let loading = kerdx.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
+    let urlVars = kerdx.urlSplitter(location.href).vars;
 
     let addRow = (list, callback) => {
         let names = [];
@@ -11,12 +11,12 @@ let lists = (mainBody) => {
             for (let name in row) {
                 if (!names.includes[name] && name != '_id') {
                     names.push(name);
-                    contents[name] = { element: 'input', attributes: { id: name, name }, label: perceptor.createElement({ element: 'label', attributes: { class: 'perceptor-form-label' }, text: name, children: [{ element: 'i', attributes: { class: 'fas fa-trash', id: 'delete' } }] }).innerHTML }
+                    contents[name] = { element: 'input', attributes: { id: name, name }, label: kerdx.createElement({ element: 'label', attributes: { class: 'kerdx-form-label' }, text: name, children: [{ element: 'i', attributes: { class: 'fas fa-trash', id: 'delete' } }] }).innerHTML }
                 }
             }
         }
 
-        let addForm = perceptor.createForm({
+        let addForm = kerdx.createForm({
             title: 'Add Row', contents, attributes: { style: {}, class: 'form' }, columns: 2, buttons: {
                 controls: {
                     element: 'span', attributes: { style: { padding: '1em' } }, children: [
@@ -41,7 +41,7 @@ let lists = (mainBody) => {
     }
 
     let editRow = (list, id) => {
-        let me = perceptor.array.find(list.contents, r => {
+        let me = kerdx.array.find(list.contents, r => {
             return r._id == id;
         });        
 
@@ -53,12 +53,12 @@ let lists = (mainBody) => {
                 if (!names.includes[name]) {
                     names.push(name);
 
-                    contents[name] = { element: 'input', attributes: { id: name, name, value: me[name]|| '' }, label: perceptor.createElement({ element: 'label', attributes: { class: 'perceptor-form-label' }, text: name, children: [{ element: 'i', attributes: { class: 'fas fa-trash', id: 'delete' } }] }).innerHTML }
+                    contents[name] = { element: 'input', attributes: { id: name, name, value: me[name]|| '' }, label: kerdx.createElement({ element: 'label', attributes: { class: 'kerdx-form-label' }, text: name, children: [{ element: 'i', attributes: { class: 'fas fa-trash', id: 'delete' } }] }).innerHTML }
                 }
             }
         }
 
-        let editForm = perceptor.createForm({
+        let editForm = kerdx.createForm({
             title: 'Edit Row', contents, attributes: { style: {}, class: 'form' }, columns: 2, buttons: {
                 controls: {
                     element: 'span', attributes: { style: { padding: '1em' } }, children: [
@@ -87,7 +87,7 @@ let lists = (mainBody) => {
     }
 
     let cloneRow = (list, id) => {
-        let me = perceptor.array.find(list.contents, r => {
+        let me = kerdx.array.find(list.contents, r => {
             return r._id == id;
         });        
 
@@ -99,11 +99,11 @@ let lists = (mainBody) => {
                 if (!names.includes[name]) {
                     names.push(name);
 
-                    contents[name] = { element: 'input', attributes: { id: name, name, value: me[name] || '' }, label: perceptor.createElement({ element: 'label', attributes: { class: 'perceptor-form-label' }, text: name, children: [{ element: 'i', attributes: { class: 'fas fa-trash', id: 'delete' } }] }).innerHTML }
+                    contents[name] = { element: 'input', attributes: { id: name, name, value: me[name] || '' }, label: kerdx.createElement({ element: 'label', attributes: { class: 'kerdx-form-label' }, text: name, children: [{ element: 'i', attributes: { class: 'fas fa-trash', id: 'delete' } }] }).innerHTML }
                 }
             }
         }
-        let cloneForm = perceptor.createForm({
+        let cloneForm = kerdx.createForm({
             title: 'Clone Row', contents, attributes: { style: {}, class: 'form' }, columns: 2, buttons: {
                 controls: {
                     element: 'span', attributes: { style: { padding: '1em' } }, children: [
@@ -141,14 +141,14 @@ let lists = (mainBody) => {
     }
 
     let makeRow = (form, callback) => {
-        let popUp = perceptor.popUp(form);
+        let popUp = kerdx.popUp(form);
 
         form.find('#add-data').addEventListener('click', event => {
-            addData(Object.keys(perceptor.jsonForm(form)), name => {
-                form.find('.perceptor-form-contents').makeElement({
-                    element: 'div', attributes: { class: 'perceptor-form-single-content' }, children: [
-                        { element: 'label', attributes: { class: 'perceptor-form-label' }, text: name, children: [{ element: 'i', attributes: { class: 'fas fa-trash', id: 'delete' } }] },
-                        { element: 'input', attributes: { class: 'perceptor-form-data', name, id: name } }
+            addData(Object.keys(kerdx.jsonForm(form)), name => {
+                form.find('.kerdx-form-contents').makeElement({
+                    element: 'div', attributes: { class: 'kerdx-form-single-content' }, children: [
+                        { element: 'label', attributes: { class: 'kerdx-form-label' }, text: name, children: [{ element: 'i', attributes: { class: 'fas fa-trash', id: 'delete' } }] },
+                        { element: 'input', attributes: { class: 'kerdx-form-data', name, id: name } }
                     ]
                 });
             });
@@ -157,13 +157,13 @@ let lists = (mainBody) => {
         form.addEventListener('click', event => {
             let target = event.target;
             if (target.id == 'delete') {
-                target.getParents('.perceptor-form-single-content').remove();
+                target.getParents('.kerdx-form-single-content').remove();
             }
         });
 
         form.addEventListener('submit', event => {
             event.preventDefault();
-            let data = perceptor.jsonForm(form);
+            let data = kerdx.jsonForm(form);
             if (Object.keys(data).length == 0) {
                 form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `Row must contain some data` });
             }
@@ -175,7 +175,7 @@ let lists = (mainBody) => {
     }
 
     let addData = (contents, callback) => {
-        let addDataForm = perceptor.createForm({
+        let addDataForm = kerdx.createForm({
             title: 'Add Data Form', attributes: { class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { name: 'name', id: 'name' } }
@@ -183,13 +183,13 @@ let lists = (mainBody) => {
             buttons: { submit: { element: 'button', text: 'Add Content' } }
         });
 
-        let popUp = perceptor.popUp(addDataForm);
+        let popUp = kerdx.popUp(addDataForm);
 
         addDataForm.addEventListener('submit', event => {
             event.preventDefault();
             let name = addDataForm.find('#name').value;
 
-            let formValidation = perceptor.validateForm(addDataForm);
+            let formValidation = kerdx.validateForm(addDataForm);
 
             if (!formValidation.flag) {
                 addDataForm.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `Form ${formValidation.elementName} is faulty` });
@@ -213,7 +213,7 @@ let lists = (mainBody) => {
             all: system.get({ collection: 'lists', query: {}, options: { projection: { name: 1 } }, many: true })
         };
 
-        perceptor.runParallel(run, result => {
+        kerdx.runParallel(run, result => {
             settingsMainWindow.makeElement([
                 {
                     element: 'div', attributes: { id: 'list-details' }, children: [
@@ -246,24 +246,24 @@ let lists = (mainBody) => {
                 }
             ]);
 
-            let listTable = perceptor.createTable({
+            let listTable = kerdx.createTable({
                 contents: result.me.contents, search: true, sort: true
             });
 
-            perceptor.listenTable({ options: ['edit', 'clone', 'delete'], table: listTable }, {
+            kerdx.listenTable({ options: ['edit', 'clone', 'delete'], table: listTable }, {
                 click: event => {
                     let target = event.target;
-                    let { row } = target.getParents('.perceptor-table-column-cell').dataset;
-                    let table = target.getParents('.perceptor-table');
-                    let id = table.find(`.perceptor-table-column[data-name="_id"]`).find(`.perceptor-table-column-cell[data-row="${row}"]`).dataset.value;
+                    let { row } = target.getParents('.kerdx-table-column-cell').dataset;
+                    let table = target.getParents('.kerdx-table');
+                    let id = table.find(`.kerdx-table-column[data-name="_id"]`).find(`.kerdx-table-column-cell[data-row="${row}"]`).dataset.value;
 
-                    if (target.id == 'perceptor-table-option-edit') {
+                    if (target.id == 'kerdx-table-option-edit') {
                         editRow(result.me, id);
                     }
-                    else if (target.id == 'perceptor-table-option-clone') {
+                    else if (target.id == 'kerdx-table-option-clone') {
                         cloneRow(result.me, id);
                     }
-                    else if (target.id == 'perceptor-table-option-delete') {
+                    else if (target.id == 'kerdx-table-option-delete') {
                         deleteRow(result.me, id);
                     }
                 }
@@ -307,7 +307,7 @@ let lists = (mainBody) => {
 
     let clone = (id) => {
         system.get({ collection: 'lists', query: { _id: id }, options: { projection: { image: 0 } }, changeQuery: { _id: 'objectid' } }).then(list => {
-            let cloneForm = perceptor.createForm({
+            let cloneForm = kerdx.createForm({
                 title: 'Clone List', attributes: { enctype: 'multipart/form-data', id: 'clone-list-form', class: 'form' },
                 contents: {
                     name: { element: 'input', attributes: { id: 'name', name: 'name', value: list.name } },
@@ -317,14 +317,14 @@ let lists = (mainBody) => {
                 }
             });
 
-            let popUp = perceptor.popUp(cloneForm);
+            let popUp = kerdx.popUp(cloneForm);
 
             make(cloneForm, list);
         });
     }
 
     let edit = (list) => {
-        let editForm = perceptor.createForm({
+        let editForm = kerdx.createForm({
             title: 'Edit List', attributes: { enctype: 'multipart/form-data', id: 'edit-list-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name', value: list.name } },
@@ -334,15 +334,15 @@ let lists = (mainBody) => {
             }
         });
 
-        let popUp = perceptor.popUp(editForm);
+        let popUp = kerdx.popUp(editForm);
 
         editForm.addEventListener('submit', event => {
             event.preventDefault();
-            let data = perceptor.jsonForm(editForm);
+            let data = kerdx.jsonForm(editForm);
             data.action = 'editList';
             data.id = list._id;
 
-            let formValidation = perceptor.validateForm(editForm);
+            let formValidation = kerdx.validateForm(editForm);
 
             if (!formValidation.flag) {
                 loading.replaceWith(editForm.getState({ name: 'submit' }));
@@ -367,7 +367,7 @@ let lists = (mainBody) => {
     }
 
     let create = () => {
-        let createForm = perceptor.createForm({
+        let createForm = kerdx.createForm({
             title: 'Create List', attributes: { enctype: 'multipart/form-data', id: 'create-list-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name' } },
@@ -377,7 +377,7 @@ let lists = (mainBody) => {
             }
         });
 
-        let popUp = perceptor.popUp(createForm);
+        let popUp = kerdx.popUp(createForm);
 
         make(createForm);
     }
@@ -404,14 +404,14 @@ let lists = (mainBody) => {
     let make = (form, list) => {
         form.addEventListener('submit', event => {
             event.preventDefault();
-            let data = perceptor.jsonForm(form);
+            let data = kerdx.jsonForm(form);
             data.action = 'createList';
             data.contents = [];
-            if (perceptor.isset(list)) {
+            if (kerdx.isset(list)) {
                 data.contents = list.contents;
             }
             data.contents = JSON.stringify(data.contents);
-            let formValidation = perceptor.validateForm(form);
+            let formValidation = kerdx.validateForm(form);
 
             if (!formValidation.flag) {
                 loading.replaceWith(form.getState({ name: 'submit' }));
@@ -435,7 +435,7 @@ let lists = (mainBody) => {
 
     }
 
-    if (!perceptor.isset(urlVars.action) || urlVars.action == 'view') {
+    if (!kerdx.isset(urlVars.action) || urlVars.action == 'view') {
         settingsMainWindow.makeElement([
             {
                 element: 'div', attributes: { class: 'settings-sub-menu' }, children: [
@@ -448,27 +448,30 @@ let lists = (mainBody) => {
         ]);
         let mainContentWindow = settingsMainWindow.find('.settings-content-window');
 
-        system.get({ collection: 'lists', query: {}, options: { projection: { name: 1 } }, many: true }).then(tags => {
+        system.get({ collection: 'lists', query: {}, options: { projection: { name: 1, recycled: 1 } }, many: true }).then(foundLists => {
+            foundLists = kerdx.array.findAll(foundLists, item => {
+                return item.recycled == undefined || item.recycled == false;
+            });
 
-            let listsTable = perceptor.createTable({
-                title: 'All Lists', contents: tags, search: true, sort: true
+            let listsTable = kerdx.createTable({
+                title: 'All Lists', contents: foundLists, search: true, sort: true
             });
 
             mainContentWindow.render(listsTable);
-            perceptor.listenTable({ options: ['view', 'clone', 'delete'], table: listsTable }, {
+            kerdx.listenTable({ options: ['view', 'clone', 'delete'], table: listsTable }, {
                 click: event => {
                     let target = event.target;
-                    let { row } = target.getParents('.perceptor-table-column-cell').dataset;
-                    let table = target.getParents('.perceptor-table');
-                    let id = table.find(`.perceptor-table-column[data-name="_id"]`).find(`.perceptor-table-column-cell[data-row="${row}"]`).dataset.value;
+                    let { row } = target.getParents('.kerdx-table-column-cell').dataset;
+                    let table = target.getParents('.kerdx-table');
+                    let id = table.find(`.kerdx-table-column[data-name="_id"]`).find(`.kerdx-table-column-cell[data-row="${row}"]`).dataset.value;
 
-                    if (target.id == 'perceptor-table-option-view') {
+                    if (target.id == 'kerdx-table-option-view') {
                         system.redirect('settings.html?page=lists&action=show&id=' + id);
                     }
-                    else if (target.id == 'perceptor-table-option-clone') {
+                    else if (target.id == 'kerdx-table-option-clone') {
                         clone(id);
                     }
-                    else if (target.id == 'perceptor-table-option-delete') {
+                    else if (target.id == 'kerdx-table-option-delete') {
                         _delete(id);
                     }
                 }

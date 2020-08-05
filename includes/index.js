@@ -1,10 +1,11 @@
-import { Perceptor } from '../Perceptors/front/index.js';
+window.system = {};
+window.system = {};
+
+import { Kerdx } from '../Kerdx/index.js';
 import { App } from './pages/App.js';
 import * as chart from './Chart.js';
 
-window.perceptor = new Perceptor();
-window.system = {};
-let resume, codeshop, portfolio, about, contact, blog, cart;
+window.kerdx = new Kerdx();
 const app = new App();
 let viewSet = false;
 window.log = console.log;
@@ -15,13 +16,13 @@ function setupView(user) {
     view.secondaryColor = 'rgb(0, 0, 0)';
     view.accientColor = 'rgb(64, 168, 45)';
 
-    if (perceptor.isset(user) && user != 'undefined') {
+    if (kerdx.isset(user) && user != 'undefined') {
         system.get({ collection: 'views', query: { owner: user } }).then(myView => {
-            if (perceptor.isnull(myView)) {
+            if (kerdx.isnull(myView)) {
                 system.connect({ data: { action: 'saveView', view: JSON.stringify(view) } });
             }
             else {
-                perceptor.object.copy(myView.view, view);
+                kerdx.object.copy(myView.view, view);
             }
 
             system.loadView(view);
@@ -54,7 +55,7 @@ function route() {
     });
 
     let { url, pathname } = location;
-    if (!perceptor.isset(user) || user == 'undefined') {
+    if (!kerdx.isset(user) || user == 'undefined') {
         if (!(pathname == '/' || pathname == '/index.html')) {
             system.redirect('index.html');
         }
@@ -115,21 +116,16 @@ function display() {
             ]
         }
     ]);
+    let url = kerdx.urlSplitter(location.href);
 
     header.find('.toggle').addEventListener('click', event => {
         event.target.classList.toggle('toggle-open');
         event.target.classList.toggle('toggle-close');
-        if (!perceptor.isset(header.find('#header-side-bar').css().display)) {
+        if (!kerdx.isset(header.find('#header-side-bar').css().display)) {
             header.find('#header-side-bar').css({ display: 'grid' });
         }
         else {
             header.find('#header-side-bar').cssRemove(['display']);
-        }
-    });
-
-    header.addEventListener('click', event => {
-        if (event.target.classList.contains('get-started')) {
-            login(document.body.find('#main-window-container'));
         }
     });
 
@@ -142,7 +138,7 @@ function display() {
                         element: 'div', attributes: { class: 'descriptive-link' }, children: [
                             { element: 'h5', attributes: { class: 'descriptive-link-title' }, html: 'Inventory</br>Management' },
                             { element: 'p', attributes: { class: 'descriptive-link-text' }, text: 'This is a simple Inventory Management system for automating most of your work in store management.' },
-                            { element: 'a', attributes: { class: 'btn btn-big' }, text: 'Get App' }
+                            { element: 'a', attributes: { class: 'btn btn-big', href: 'index.html?page=newAccount' }, text: 'Create Account' }
                         ]
                     },
                 ]
@@ -153,15 +149,18 @@ function display() {
         ]
     });
 
-    if (perceptor.urlSplitter(location).vars.page == 'login') {
-        login(document.body.find('#main-window-container'));
+    if (url.vars.page == 'login') {
+        login(main.find('#main-window-container'));
+    }
+    else if (url.vars.page == 'newAccount') {
+        createAccount(main.find('#main-window-container'));
     }
 }
 
 function login(container) {
-    let loading = perceptor.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
+    let loading = kerdx.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
 
-    let loginForm = perceptor.createForm({
+    let loginForm = kerdx.createForm({
         title: 'Login Form', attributes: { id: 'login-form', class: 'form' },
         contents: {
             email: { element: 'input', attributes: { id: 'email', name: 'email' } },
@@ -181,7 +180,7 @@ function login(container) {
         loginForm.getState({ name: 'submit' }).replaceWith(loading);
         loginForm.setState({ name: 'error', attributes: { style: { display: 'none' } }, text: '' });
 
-        if (!perceptor.validateForm(loginForm)) {
+        if (!kerdx.validateForm(loginForm)) {
             loading.replaceWith(loginForm.getState({ name: 'submit' }));
             loginForm.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: 'Faulty form' });
 
@@ -189,7 +188,7 @@ function login(container) {
         }
 
         loading.replaceWith(loginForm.getState({ name: 'submit' }));
-        let data = perceptor.jsonForm(loginForm);
+        let data = kerdx.jsonForm(loginForm);
         data.action = 'login';
 
         system.connect({ data }).then(result => {
@@ -206,6 +205,52 @@ function login(container) {
                 setupView(result.user);
                 system.redirect(app.currentPage);
                 note = 'Welcome back!!! ' + data.email;
+            }
+
+            system.notify({ note });
+        });
+    });
+}
+
+function createAccount(container) {
+    let accountForm = kerdx.createForm({
+        title: 'Account Form', attributes: { id: 'account-form', class: 'form' },
+        contents: {
+            account: { element: 'input', attributes: { id: 'account', name: 'account' } },
+            admin: { element: 'input', attributes: { id: 'admin', name: 'admin' } },
+            password: {
+                element: 'input', attributes: { id: 'password', name: 'password', type: 'password', autoComplete: true }
+            }
+        },
+        buttons: {
+            submit: { element: 'button', attributes: { id: 'submit' }, text: 'Submit' },
+        }
+    });
+
+    container.render(accountForm);
+
+    accountForm.addEventListener('submit', event => {
+        event.preventDefault();
+
+        if (!kerdx.validateForm(accountForm)) {
+            accountForm.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: 'Faulty form' });
+            return;
+        }
+
+        let data = kerdx.jsonForm(accountForm);
+        data.action = 'createAccount';
+
+        system.connect({ data }).then(result => {
+            let note;
+            if (result == 'found') {
+                note = 'Account already Exists';
+            }
+            else {
+                document.body.dataset.user = result.user;
+                document.body.dataset.userType = result.userType;
+                setupView(result.user);
+                system.redirect('dashboard.html');
+                note = 'Welcome' + data.admin;
             }
 
             system.notify({ note });
@@ -231,7 +276,7 @@ system.smallScreen = window.matchMedia("(min-width: 700px)");
 system.realSmallScreen = window.matchMedia("(min-width: 500px)");
 
 system.redirect = url => {
-    window.history.pushState('page', 'title', perceptor.api.prepareUrl(url));
+    window.history.pushState('page', 'title', kerdx.api.prepareUrl(url));
     route();
 }
 
@@ -255,13 +300,13 @@ system.notify = (params) => {
 
     openNotifications.click();
 
-    let note = perceptor.createElement({
+    let note = kerdx.createElement({
         element: 'span', attributes: { class: 'single-notification' }, children: [
             { element: 'p', attributes: { class: 'single-notification-text' }, text: params.note }
         ]
     });
 
-    if (perceptor.isset(params.link)) {
+    if (kerdx.isset(params.link)) {
         note.makeElement({ element: 'a', attributes: { href: params.link, class: 'fas fa-eye', title: 'see notification' } }
         );
     }
@@ -291,14 +336,14 @@ system.notify = (params) => {
 }
 
 system.connect = (params) => {
-    let progressBar = perceptor.createElement({ element: 'input', attributes: { class: 'ajax-progress', type: 'progress' } });
+    let progressBar = kerdx.createElement({ element: 'input', attributes: { class: 'ajax-progress', type: 'progress' } });
     params.onprogress = (stage) => {
         progressBar.css({ width: stage + '%' })
     }
 
     return new Promise((resolve, reject) => {
         document.body.append(progressBar);
-        perceptor.api.ajax(params)
+        kerdx.api.ajax(params)
             .then(result => {
                 result = JSON.parse(result);
 
@@ -339,7 +384,7 @@ system.display404 = (container) => {
 }
 
 system.editableImage = (name, image) => {
-    let editableImage = perceptor.createElement({
+    let editableImage = kerdx.createElement({
         element: 'span', attributes: { id: 'editable-image-container' }, children: [
             { element: 'img', attributes: { id: 'editable-image', src: image || 'images/logo.png' } },
             {
@@ -364,15 +409,15 @@ system.editableImage = (name, image) => {
 }
 
 system.loadView = (view) => {
-    view.lightPrimaryColor = perceptor.colorHandler.addOpacity(view.primaryColor, 0.5);
-    view.lighterPrimaryColor = perceptor.colorHandler.addOpacity(view.primaryColor, 0.2);
-    view.lightSecondaryColor = perceptor.colorHandler.addOpacity(view.secondaryColor, 0.5);
-    view.lighterSecondaryColor = perceptor.colorHandler.addOpacity(view.secondaryColor, 0.2);
-    view.lightAccientColor = perceptor.colorHandler.addOpacity(view.accientColor, 0.5);
-    view.lighterAccientColor = perceptor.colorHandler.addOpacity(view.accientColor, 0.2);
+    view.lightPrimaryColor = kerdx.colorHandler.addOpacity(view.primaryColor, 0.5);
+    view.lighterPrimaryColor = kerdx.colorHandler.addOpacity(view.primaryColor, 0.2);
+    view.lightSecondaryColor = kerdx.colorHandler.addOpacity(view.secondaryColor, 0.5);
+    view.lighterSecondaryColor = kerdx.colorHandler.addOpacity(view.secondaryColor, 0.2);
+    view.lightAccientColor = kerdx.colorHandler.addOpacity(view.accientColor, 0.5);
+    view.lighterAccientColor = kerdx.colorHandler.addOpacity(view.accientColor, 0.2);
 
     let rootCss = document.head.find('#root-css');
-    if (perceptor.isnull(rootCss)) {
+    if (kerdx.isnull(rootCss)) {
         rootCss = document.head.makeElement({ element: 'style', attributes: { id: 'root-css' } });
     }
 
@@ -393,12 +438,12 @@ system.loadView = (view) => {
 }
 
 system.plot = (params, callback) => {
-    let canvas = perceptor.createElement({ element: 'canvas' });
+    let canvas = kerdx.createElement({ element: 'canvas' });
     let ctx = canvas.getContext('2d');
 
     let getLabels = (size) => {
         let getting = prompt(`Enter the labels of size ${size} for ${params.title} data, ',' seperated`);
-        if (perceptor.isnull(getting)) getting = Array(size).fill('');
+        if (kerdx.isnull(getting)) getting = Array(size).fill('');
         else getting = getting.split(',');
 
         if (getting.length < size) {
@@ -437,7 +482,7 @@ system.setSources = (callback) => {
     let sourceHistoryPosition = -1;
     let navigating = false;
 
-    let sources = perceptor.createElement({
+    let sources = kerdx.createElement({
         element: 'section', attributes: { class: 'sources-body' }, children: [
             {
                 element: 'div', attributes: { id: 'sources-side-bar' }, children: [
@@ -460,7 +505,7 @@ system.setSources = (callback) => {
         list: ['Null', 'Length', 'Positions', 'Equals', 'Less than', 'Greater than']
     }
 
-    let popUp = perceptor.popUp(sources);
+    let popUp = kerdx.popUp(sources);
     popUp.find('#toggle-window').click();
     let allSources;
 
@@ -476,18 +521,18 @@ system.setSources = (callback) => {
         tables = tables || allSources;
 
         let sources = {};
-        perceptor.object.copy(tables, sources);
+        kerdx.object.copy(tables, sources);
         for (let list of sources.lists) {
             sources[list.name] = list.contents;
         }
 
         for (let table in sources) {
             let value = { collection: table };
-            if (!perceptor.isset(tables[table])) {
+            if (!kerdx.isset(tables[table])) {
                 value = { collection: 'lists', item: table };
             }
             data.children.push({ value, name: table });
-            data.contents = data.contents.concat(perceptor.object.keysOfObjectArray(sources[table]));
+            data.contents = data.contents.concat(kerdx.object.keysOfObjectArray(sources[table]));
         }
         data.source = sources;
         return data;
@@ -511,8 +556,8 @@ system.setSources = (callback) => {
             data.path += ' -> ' + details[name];
         }
 
-        if (perceptor.isset(item)) {
-            let theList = perceptor.array.find(tableContent, list => {
+        if (kerdx.isset(item)) {
+            let theList = kerdx.array.find(tableContent, list => {
                 return list.name == item;
             });
 
@@ -525,7 +570,7 @@ system.setSources = (callback) => {
                     continue;
                 }
                 let value = { collection, name };
-                if (perceptor.isset(item)) {
+                if (kerdx.isset(item)) {
                     value = { collection, item, name };
                 }
                 data.children.push({ value, name });
@@ -554,8 +599,8 @@ system.setSources = (callback) => {
             data.path += ' -> ' + details[name];
         }
 
-        if (perceptor.isset(item)) {
-            let theList = perceptor.array.find(tableContent, list => {
+        if (kerdx.isset(item)) {
+            let theList = kerdx.array.find(tableContent, list => {
                 return list.name == item;
             });
 
@@ -565,7 +610,7 @@ system.setSources = (callback) => {
         for (let i = 0; i < tableContent.length; i++) {
             let text = tableContent[i][name];
             let value = { collection, name, position: i };
-            if (perceptor.isset(item)) {
+            if (kerdx.isset(item)) {
                 value.item = item;
             }
             data.contents.push(i + 1);
@@ -589,13 +634,13 @@ system.setSources = (callback) => {
         }
         navigating = false;
 
-        if (!perceptor.isset(data)) {
+        if (!kerdx.isset(data)) {
             data = sources.find('.sources-main-window-content').data;
         }
 
         let filters = sources.findAll('.sources-panel-filter');
         let filteredData = {}
-        perceptor.object.copy(data, filteredData);
+        kerdx.object.copy(data, filteredData);
         for (let i = 0; i < filters.length; i++) {
             let filter = filters[i];
 
@@ -608,7 +653,7 @@ system.setSources = (callback) => {
             }
         }
 
-        let contents = perceptor.createElement({
+        let contents = kerdx.createElement({
             element: 'div', attributes: { class: 'sources-main-window-content', 'data-path': data.path, 'data-details': JSON.stringify(data.details), 'data-type': data.type }, children: [
                 {
                     element: 'span', attributes: { id: 'sources-main-window-content-header' }, children: [
@@ -661,18 +706,18 @@ system.setSources = (callback) => {
         sources.find('#sources-main-window').render(contents);
 
         if (data.type == 'table') {
-            let createTable = perceptor.createTable({ title: 'Table Contents', attributes: { id: data.path }, contents: data.source, search: true, sort: true });
+            let createTable = kerdx.createTable({ title: 'Table Contents', attributes: { id: data.path }, contents: data.source, search: true, sort: true });
 
             sources.find('.sources-main-window-content').append(createTable);
 
-            perceptor.listenTable({ options: ['save'], table: createTable }, {
+            kerdx.listenTable({ options: ['save'], table: createTable }, {
                 click: event => {
                     let target = event.target;
-                    let { row } = target.getParents('.perceptor-table-column-cell').dataset;
-                    let table = target.getParents('.perceptor-table');
-                    let id = table.find(`.perceptor-table-column[data-name="_id"]`).find(`.perceptor-table-column-cell[data-row="${row}"]`).dataset.value;
+                    let { row } = target.getParents('.kerdx-table-column-cell').dataset;
+                    let table = target.getParents('.kerdx-table');
+                    let id = table.find(`.kerdx-table-column[data-name="_id"]`).find(`.kerdx-table-column-cell[data-row="${row}"]`).dataset.value;
 
-                    if (target.id == 'perceptor-table-option-save') {
+                    if (target.id == 'kerdx-table-option-save') {
                         console.log(row);
                     }
                 }
@@ -709,7 +754,7 @@ system.setSources = (callback) => {
     });
 
     let done = (value, type, filterValues) => {
-        if (perceptor.isset(filterValues)) {
+        if (kerdx.isset(filterValues)) {
             value += '***filterValues:' + JSON.stringify(filterValues);
         }
         if (callback(`$#&{${value}}&#$`, type) != false) {
@@ -765,9 +810,9 @@ system.setSources = (callback) => {
             details = JSON.parse(details);
             details.filter = [];
 
-            let table = sources.find('.perceptor-table');
-            let firstColumn = table.find('.perceptor-table-column');
-            let firstCells = firstColumn.findAll('.perceptor-table-column-cell');
+            let table = sources.find('.kerdx-table');
+            let firstColumn = table.find('.kerdx-table-column');
+            let firstCells = firstColumn.findAll('.kerdx-table-column-cell');
             let positions = [];
 
             for (let i = 0; i < firstCells.length; i++) {
@@ -785,9 +830,9 @@ system.setSources = (callback) => {
             details = JSON.parse(details);
             details.filter = [];
 
-            let table = sources.find('.perceptor-table');
-            let firstColumn = table.find('.perceptor-table-column');
-            let firstCells = firstColumn.findAll('.perceptor-table-column-cell');
+            let table = sources.find('.kerdx-table');
+            let firstColumn = table.find('.kerdx-table-column');
+            let firstCells = firstColumn.findAll('.kerdx-table-column-cell');
             let positions = [];
 
             for (let i = 0; i < firstCells.length; i++) {
@@ -826,14 +871,14 @@ system.setSources = (callback) => {
             let { value, type } = target.dataset;
             done(value, type);
         }
-        else if (!perceptor.isnull(target.getParents('.sources-single'))) {
+        else if (!kerdx.isnull(target.getParents('.sources-single'))) {
             let { value, type } = target.getParents('.sources-single').dataset;
             done(value, type);
         }
     });
 
     let runFilter = (data, filterData) => {
-        let action = perceptor.textToCamelCased(filterData.options);
+        let action = kerdx.textToCamelCased(filterData.options);
         let run = {
             equals: () => {
                 let children = [];
@@ -934,7 +979,7 @@ system.setSources = (callback) => {
             type: () => {
                 let children = [];
                 for (let child of data.children) {
-                    let type = perceptor.isset(allSources[child.name]) ? 'table' : 'list';
+                    let type = kerdx.isset(allSources[child.name]) ? 'table' : 'list';
                     if (type != filterData.value) {
                         continue;
                     }
@@ -947,7 +992,7 @@ system.setSources = (callback) => {
 
             positions: () => {
                 let children = [];
-                let value = perceptor.array.each(filterData.value.split(','), v => {
+                let value = kerdx.array.each(filterData.value.split(','), v => {
                     return v.trim();
                 });
 
@@ -974,7 +1019,7 @@ system.setSources = (callback) => {
 
 
                 for (let child of data.children) {
-                    let sum = perceptor.array.sum(contents[child.name]);
+                    let sum = kerdx.array.sum(contents[child.name]);
                     if (sum != filterData.value) {
                         continue;
                     }
@@ -996,7 +1041,7 @@ system.setSources = (callback) => {
 
 
                 for (let child of data.children) {
-                    let product = perceptor.array.product(contents[child.name]);
+                    let product = kerdx.array.product(contents[child.name]);
                     if (product != filterData.value) {
                         continue;
                     }
@@ -1039,9 +1084,9 @@ system.setSources = (callback) => {
     let filter = () => {
         let data = sources.find('.sources-main-window-content').data;
         filters[data.path] = filters[data.path] || {};
-        let contents = perceptor.array.toSet(data.contents);
+        let contents = kerdx.array.toSet(data.contents);
         contents.unshift('Null');
-        let filterForm = perceptor.createForm({
+        let filterForm = kerdx.createForm({
             title: 'Create Filter', attributes: { class: 'form', style: { border: '1px solid var(--secondary-color)' } },
             contents: {
                 options: { element: 'select', attributes: { name: 'options', id: 'options' }, options: filterOptions[data.type] },
@@ -1052,19 +1097,19 @@ system.setSources = (callback) => {
             }
         });
 
-        let filterPopUp = perceptor.popUp(filterForm);
+        let filterPopUp = kerdx.popUp(filterForm);
         filterPopUp.find('#toggle-window').click();
 
         filterForm.addEventListener("submit", event => {
             event.preventDefault();
-            let formValidation = perceptor.validateForm(filterForm);
+            let formValidation = kerdx.validateForm(filterForm);
 
             if (!formValidation.flag) {
                 filterForm.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `Form ${formValidation.elementName} is faulty` });
                 return;
             }
 
-            let filterData = perceptor.jsonForm(filterForm);
+            let filterData = kerdx.jsonForm(filterForm);
             let readableData = `Options: ${filterData.options}, value: ${filterData.value}`;
 
             let filterContainer = sources.find('#sources-panel');
@@ -1102,19 +1147,19 @@ system.getSources = (data, callback) => {
     for (let i in data) {
         content = data[i];
         contentName = content.name;
-        if (perceptor.isset(content.source) && content.source != '') {
+        if (kerdx.isset(content.source) && content.source != '') {
             let setSources = () => {
                 for (let source of sources) {
-                    source = JSON.parse(perceptor.inBetween(source, '$#&{', '}&#$'));
+                    source = JSON.parse(kerdx.inBetween(source, '$#&{', '}&#$'));
                     collection = source.collection;
                     item = source.item;
                     name = source.name;
                     position = source.position;
                     filter = source.filter;
 
-                    if (!perceptor.isset(item)) {
+                    if (!kerdx.isset(item)) {
                         find = JSON.stringify({ contentName, position, name, filter });
-                        if (perceptor.isset(name)) {
+                        if (kerdx.isset(name)) {
                             projection = { _id: 0, [name]: 1, timeCreated: 1, lastModified: 1 };
                             runSources[find] = system.get({ collection, query: {}, projection, many: true });
                         }
@@ -1128,12 +1173,12 @@ system.getSources = (data, callback) => {
                     }
                 }
             }
-            sources = perceptor.allCombine(content.source, '$#&{', '}&#$');
+            sources = kerdx.allCombine(content.source, '$#&{', '}&#$');
             setSources();
         }
     }
 
-    perceptor.runParallel(runSources, results => {
+    kerdx.runParallel(runSources, results => {
         let source, content;
 
         for (let i in results) {
@@ -1143,21 +1188,21 @@ system.getSources = (data, callback) => {
             name = source.name;
             position = source.position;
             filter = source.filter;
-            duration = perceptor.array.find(data, d => {
+            duration = kerdx.array.find(data, d => {
                 return d.name == contentName;
             }).duration;
 
-            if (!perceptor.isset(item)) {
-                if (perceptor.isset(name)) {
-                    content = perceptor.object.valueOfObjectArray(system.runFilters(results[i], filter, duration), name);
+            if (!kerdx.isset(item)) {
+                if (kerdx.isset(name)) {
+                    content = kerdx.object.valueOfObjectArray(system.runFilters(results[i], filter, duration), name);
                 }
                 else {
                     content = system.runFilters(results[i], filter, duration);
                 }
             }
             else {
-                if (perceptor.isset(name)) {
-                    content = perceptor.object.valueOfObjectArray(system.runFilters(results[i].contents, filter, duration), name);
+                if (kerdx.isset(name)) {
+                    content = kerdx.object.valueOfObjectArray(system.runFilters(results[i].contents, filter, duration), name);
                 }
                 else {
                     content = system.runFilters(results[i].contents, filter, duration);
@@ -1166,7 +1211,7 @@ system.getSources = (data, callback) => {
 
             allSources[contentName] = allSources[contentName] || [];
 
-            if (perceptor.isset(position)) {
+            if (kerdx.isset(position)) {
                 allSources[contentName].push(content[position]);
             }
             else {
@@ -1272,7 +1317,7 @@ system.runFilters = (contents, filters, duration) => {
 
         positions: () => {
             let children = [];
-            let value = perceptor.array.each(filterData.value.split(','), v => {
+            let value = kerdx.array.each(filterData.value.split(','), v => {
                 return v.trim();
             });
 
@@ -1289,7 +1334,7 @@ system.runFilters = (contents, filters, duration) => {
         sum: () => {
             let children = [];
             for (let child of contents) {
-                let sum = perceptor.array.sum(child);
+                let sum = kerdx.array.sum(child);
                 if (sum != filterData.value) {
                     continue;
                 }
@@ -1301,7 +1346,7 @@ system.runFilters = (contents, filters, duration) => {
         product: () => {
             let children = [];
             for (let child of contents) {
-                let sum = perceptor.array.product(child);
+                let sum = kerdx.array.product(child);
                 if (sum != filterData.value) {
                     continue;
                 }
@@ -1313,35 +1358,35 @@ system.runFilters = (contents, filters, duration) => {
 
     let checkDuration = () => {
         let duplicate = [];
-        if (perceptor.isset(duration.startDate) && duration.startDate != '') {
-            start = perceptor.secondsTillDate(duration.startDate);
-            if (perceptor.isset(duration.startTime) && duration.startTime != '') {
-                if (perceptor.isTimeValid(duration.startTime)) {
-                    start = Math.floor(start) + perceptor.isTimeValid(duration.startTime);
+        if (kerdx.isset(duration.startDate) && duration.startDate != '') {
+            start = kerdx.secondsTillDate(duration.startDate);
+            if (kerdx.isset(duration.startTime) && duration.startTime != '') {
+                if (kerdx.isTimeValid(duration.startTime)) {
+                    start = Math.floor(start) + kerdx.isTimeValid(duration.startTime);
                 }
             }
         }
 
-        if (perceptor.isset(duration.endDate) && duration.endDate != '') {
-            end = perceptor.secondsTillDate(duration.endDate);
-            if (perceptor.isset(duration.endTime) && duration.endTime != '') {
-                if (perceptor.isTimeValid(duration.endTime)) {
-                    end = Math.floor(end) + perceptor.isTimeValid(duration.endTime);
+        if (kerdx.isset(duration.endDate) && duration.endDate != '') {
+            end = kerdx.secondsTillDate(duration.endDate);
+            if (kerdx.isset(duration.endTime) && duration.endTime != '') {
+                if (kerdx.isTimeValid(duration.endTime)) {
+                    end = Math.floor(end) + kerdx.isTimeValid(duration.endTime);
                 }
             }
         }
 
-        if (!perceptor.isset(start) && !perceptor.isset(end)) {
+        if (!kerdx.isset(start) && !kerdx.isset(end)) {
             return contents;
         }
 
         for (let con of contents) {
-            moment = perceptor.secondsTillMoment(con.timeCreated);
-            if (perceptor.isset(start) && start <= moment) {
+            moment = kerdx.secondsTillMoment(con.timeCreated);
+            if (kerdx.isset(start) && start <= moment) {
                 duplicate.push(con);
             }
 
-            if (perceptor.isset(end) && end >= moment) {
+            if (kerdx.isset(end) && end >= moment) {
                 duplicate.push(con);
             }
         }
@@ -1350,10 +1395,10 @@ system.runFilters = (contents, filters, duration) => {
     }
 
     contents = checkDuration();
-    if (perceptor.isset(filters)) {
+    if (kerdx.isset(filters)) {
         for (let data of filters) {
             filterData = data;
-            action = perceptor.textToCamelCased(filterData.options);
+            action = kerdx.textToCamelCased(filterData.options);
             contents = run[action]();
         }
     }
@@ -1370,6 +1415,56 @@ system.print = (element) => {
     }
 
     window.print();
+}
+
+system.getLink = (collection, id, action) => {
+    let link;
+    if (collection == 'items') {
+        link = `items.html?page=${action}&id=${id}`;
+    }
+    else if (collection == 'users') {
+        link = `users.html?page=${action}&id=${id}`;
+    }
+    else if (collection == 'forms') {
+        link = `forms.html?page=${action}&id=${id}`;
+    }
+    else if (collection == 'reports') {
+        link = `reports.html?page=${action}&id=${id}`;
+    }
+    else if (collection == 'categories') {
+        link = `settings.html?page=categories&action=${action}&id=${id}`;
+    }
+    else if (collection == 'tags') {
+        link = `settings.html?page=tags&action=${action}&id=${id}`;
+    }
+    else if (collection == 'lists') {
+        link = `settings.html?page=lists&action=${action}&id=${id}`;
+    }
+    else if (collection == 'customforms') {
+        link = `settings.html?page=customforms&action=${action}&id=${id}`;
+    }
+    else if (collection == 'reportgenerators') {
+        link = `settings.html?page=reportgenerators&action=${action}&id=${id}`;
+    }
+
+    return link;
+}
+
+system.getNotifications = (flag) => {
+    return system.connect({ data: { action: 'getNotifications', flag } }).then(notifications => {
+        if (flag == 'all') {
+            let run = {};
+            for (let note of notifications) {
+                if (!note.delivered) {
+                    run[note._id] = system.connect({ data: { action: 'sentNotification', id: note._id } })
+                }
+            }
+            kerdx.runParallel(run, ran => {
+
+            });
+        }
+        return notifications;
+    });
 }
 
 document.addEventListener('DOMContentLoaded', event => {
@@ -1389,7 +1484,7 @@ document.addEventListener('DOMContentLoaded', event => {
     route();
 
     if (true) {
-        perceptor.api.makeWebapp(event => {
+        kerdx.api.makeWebapp(event => {
             route();
         });
     }

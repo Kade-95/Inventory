@@ -1,0 +1,68 @@
+#recycle {
+    display: grid;
+    gap: 1em;
+    grid-template-rows: max-content 1fr;
+}
+
+#recycle-menu {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    justify-content: space-evenly;
+    border: 1px solid var(--secondary-color);
+}
+
+.recycle-menu-item {
+    padding: .3em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.recycle-menu-item:hover, .recycle-menu-item.active {
+    color: var(--accient-color);
+    background-color: var(--secondary-color);
+}
+
+#recycle-window {
+    display: block;
+}
+
+.recycle-window-item {
+    display: none;
+    padding: .3em;
+    justify-content: center;
+}
+
+.recycle-window-item.active {
+    display: block;
+}
+
+.recycle-item {
+    display: inline-grid;
+    background-color: var(--secondary-color);
+    color: var(--primary-color);
+    margin: 1em;
+    align-self: flex-start;
+}
+
+.recycle-item:hover {
+    color: var(--accient-color);
+    box-shadow: 3px 3px 10px var(--light-accient-color);
+}
+
+.recycle-item-image {
+    width: 100px;
+    height: 100px;
+    margin: .3em;
+}
+
+.recycle-item-name {
+    color: inherit;
+    border-top: 1px solid var(--accient-color);
+    display: flex;
+    padding: .3em;
+    align-items: center;
+    justify-content: center;
+    text-transform: capitalize;
+}

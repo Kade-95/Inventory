@@ -1,7 +1,7 @@
 let tags = (mainBody) => {
     let settingsMainWindow = mainBody.find('#settings-main-window');
-    let loading = perceptor.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
-    let urlVars = perceptor.urlSplitter(location.href);
+    let loading = kerdx.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
+    let urlVars = kerdx.urlSplitter(location.href);
 
     let show = () => {
         let id = urlVars.vars.id;
@@ -36,7 +36,7 @@ let tags = (mainBody) => {
             });
 
             settingsMainWindow.find('#edit-tag-image').addEventListener('click', event => {
-                let uploadImageForm = perceptor.createElement({
+                let uploadImageForm = kerdx.createElement({
                     element: 'form', attributes: { class: 'single-upload-form' }, children: [
                         {
                             element: 'span', attributes: { class: 'single-upload-form-controls' }, children: [
@@ -50,7 +50,7 @@ let tags = (mainBody) => {
                     ]
                 });
 
-                let popUp = perceptor.popUp(uploadImageForm);
+                let popUp = kerdx.popUp(uploadImageForm);
 
                 uploadImageForm.find('#new-image').onChanged(value => {
                     uploadImageForm.find('#preview-image').src = value.src;
@@ -58,7 +58,7 @@ let tags = (mainBody) => {
 
                 uploadImageForm.find('#upload').addEventListener('click', event => {
                     event.preventDefault();
-                    let data = perceptor.jsonForm(uploadImageForm);
+                    let data = kerdx.jsonForm(uploadImageForm);
                     data.action = 'changeTagImage';
                     data.id = id;
 
@@ -96,7 +96,7 @@ let tags = (mainBody) => {
 
     let clone = (id) => {
         system.get({ collection: 'tags', query: { _id: id }, projection: { image: 0 }, changeQuery: { _id: 'objectid' } }).then(tag => {
-            let cloneForm = perceptor.createForm({
+            let cloneForm = kerdx.createForm({
                 title: 'Clone Tag', attributes: { enctype: 'multipart/form-data', id: 'clone-tag-form', class: 'form' },
                 contents: {
                     name: { element: 'input', attributes: { id: 'name', name: 'name', value: tag.name } },
@@ -107,14 +107,14 @@ let tags = (mainBody) => {
                 }
             });
 
-            let popUp = perceptor.popUp(cloneForm);
+            let popUp = kerdx.popUp(cloneForm);
 
             make(cloneForm);
         });
     }
 
     let edit = (tag) => {
-        let editForm = perceptor.createForm({
+        let editForm = kerdx.createForm({
             title: 'Edit Tag', attributes: { enctype: 'multipart/form-data', id: 'edit-tag-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name', value: tag.name, ignore: true } },
@@ -124,15 +124,15 @@ let tags = (mainBody) => {
             }
         });
 
-        let popUp = perceptor.popUp(editForm);
+        let popUp = kerdx.popUp(editForm);
 
         editForm.addEventListener('submit', event => {
             event.preventDefault();
-            let data = perceptor.jsonForm(editForm);
+            let data = kerdx.jsonForm(editForm);
             data.action = 'editTag';
             data.id = tag._id;
 
-            let formValidation = perceptor.validateForm(editForm);
+            let formValidation = kerdx.validateForm(editForm);
 
             if (!formValidation.flag) {
                 loading.replaceWith(editForm.getState({ name: 'submit' }));
@@ -157,7 +157,7 @@ let tags = (mainBody) => {
     }
 
     let create = () => {
-        let createForm = perceptor.createForm({
+        let createForm = kerdx.createForm({
             title: 'Create Tag', attributes: { enctype: 'multipart/form-data', id: 'create-tag-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name' } },
@@ -168,7 +168,7 @@ let tags = (mainBody) => {
             }
         });
 
-        let popUp = perceptor.popUp(createForm);
+        let popUp = kerdx.popUp(createForm);
 
         make(createForm);
     }
@@ -183,10 +183,10 @@ let tags = (mainBody) => {
     let make = (form) => {
         form.addEventListener('submit', event => {
             event.preventDefault();
-            let data = perceptor.jsonForm(form);
+            let data = kerdx.jsonForm(form);
             data.action = 'createTag';
 
-            let formValidation = perceptor.validateForm(form);
+            let formValidation = kerdx.validateForm(form);
 
             if (!formValidation.flag) {
                 loading.replaceWith(form.getState({ name: 'submit' }));
@@ -210,7 +210,7 @@ let tags = (mainBody) => {
 
     }
 
-    if (!perceptor.isset(urlVars.vars.action) || urlVars.vars.action == 'view') {
+    if (!kerdx.isset(urlVars.vars.action) || urlVars.vars.action == 'view') {
         settingsMainWindow.makeElement([
             {
                 element: 'div', attributes: { class: 'settings-sub-menu' }, children: [
@@ -223,27 +223,30 @@ let tags = (mainBody) => {
         ]);
         let mainContentWindow = settingsMainWindow.find('.settings-content-window');
 
-        system.get({ collection: 'tags', query: {}, projection: { name: 1 }, many: true }).then(tags => {
+        system.get({ collection: 'tags', query: {}, projection: { name: 1, recycled: 1 }, many: true }).then(tags => {
+            tags = kerdx.array.findAll(tags, item => {
+                return item.recycled == undefined || item.recycled == false;
+            });
 
-            let tagsTable = perceptor.createTable({
+            let tagsTable = kerdx.createTable({
                 title: 'All Tags', contents: tags, search: true, sort: true
             });
 
             mainContentWindow.render(tagsTable);
-            perceptor.listenTable({ options: ['view', 'clone', 'delete'], table: tagsTable }, {
+            kerdx.listenTable({ options: ['view', 'clone', 'delete'], table: tagsTable }, {
                 click: event => {
                     let target = event.target;
-                    let { row } = target.getParents('.perceptor-table-column-cell').dataset;
-                    let table = target.getParents('.perceptor-table');
-                    let id = table.find(`.perceptor-table-column[data-name="_id"]`).find(`.perceptor-table-column-cell[data-row="${row}"]`).dataset.value;
+                    let { row } = target.getParents('.kerdx-table-column-cell').dataset;
+                    let table = target.getParents('.kerdx-table');
+                    let id = table.find(`.kerdx-table-column[data-name="_id"]`).find(`.kerdx-table-column-cell[data-row="${row}"]`).dataset.value;
 
-                    if (target.id == 'perceptor-table-option-view') {
+                    if (target.id == 'kerdx-table-option-view') {
                         system.redirect('settings.html?page=tags&action=show&id=' + id);
                     }
-                    else if (target.id == 'perceptor-table-option-clone') {
+                    else if (target.id == 'kerdx-table-option-clone') {
                         clone(id);
                     }
-                    else if (target.id == 'perceptor-table-option-delete') {
+                    else if (target.id == 'kerdx-table-option-delete') {
                         system.redirect('settings.html?page=tags&action=delete&id=' + id);
                     }
                 }

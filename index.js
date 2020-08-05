@@ -1,7 +1,7 @@
 'use strict'
-
-let { Perceptor, Database } = require('./Perceptors/back');
+let { Kerds, Database } = require('./../Libraries/Kerds');
 global.fs = require('fs');
+global.zlib = require('zlib');
 
 let metadata = {
     styles: [
@@ -25,15 +25,18 @@ let metadata = {
         './css/views.css',
         './css/sources.css',
         './css/components.css',
+        './css/search.css',
+        './css/recycle.css',
         './css/notifications.css',
         './fontawesome/css/all.css'
     ],
     scripts: {
         './includes/index.js': { type: 'module' },
+        './jszip/dist/jszip.min.js': {}
     }
 };
 
-global.perceptor = new Perceptor({ server: { address: "mongodb://localhost:27017/", name: 'inventory' } });
+global.kerds = new Kerds({ server: { address: "mongodb://localhost:27017/", name: 'inventory' } });
 global.db = new Database({ address: "mongodb://localhost:27017/", name: 'inventory' });
 global.bcrypt = require('bcrypt');
 global.ObjectId = require('mongodb').ObjectId;
@@ -45,37 +48,39 @@ let postHandler = new PostHandler();
 let view = new View(metadata, 'webapp');
 
 function setup() {
-    return db.getCollections()
-        .then(result => {
-            let lists = perceptor.array.find(result, collection => {
-                return collection.name == 'lists';
-            });
-
-            if (!perceptor.isset(lists)) {
-                db.createCollection('lists');
-            }
-
-        });
+    return new Promise((resolve, rejects) => {
+        resolve(true);
+    });
 }
-let { port, protocol } = perceptor.getCommands('-');
+
+global.setUpAccount = (data, callback) => {
+    bcrypt.hash(data.password, 10).then(hash => {
+        db.insert({ collection: 'users', query: { userName: data.admin, currentPassword: hash, userType: 'Admin' }, getInserted: true }).then(user => {
+            db.createCollection('lists');
+            callback(user[0]);
+        });
+    });
+}
+
+let { port, protocol } = kerds.getCommands('-');
 port = port || 8080;
 protocol = protocol || 'http';
 
-setup()
-    .then(() => {
-        perceptor.createServer(port,
-            params => {
-                view.createView(params);
-            }, protocol,
-            { origins: ['*'] },
-            {
-                key: fs.readFileSync('./permissions/server.key'),
-                cert: fs.readFileSync('./permissions/server.crt')
-            }
-        );
-    })
+setup().then(() => {
+    kerds.createServer(port,
+        params => {
+            view.createView(params);
+            db.setName(global.sessions[params.sessionId].account || 'inventory');
+        }, protocol,
+        { origins: ['*'] },
+        {
+            key: fs.readFileSync('./permissions/server.key'),
+            cert: fs.readFileSync('./permissions/server.crt')
+        }
+    );
+});
 
-perceptor.recordSession(24 * 60 * 60 * 1000);
-perceptor.handleRequests = (req, res, form) => {
+kerds.recordSession(24 * 60 * 60 * 1000);
+kerds.handleRequests = (req, res, form) => {
     postHandler.act(req, res, form);
 }

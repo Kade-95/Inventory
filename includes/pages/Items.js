@@ -19,12 +19,12 @@ class Items {
             }
         ]);
 
-        this.url = perceptor.urlSplitter(location.href);
+        this.url = kerdx.urlSplitter(location.href);
         let page = this.url.vars.page;
         if (!Object.values(this.url.vars).length) {
             this.view(mainBody.find('#main-container-body-main-window'));
         }
-        else if (perceptor.isset(this[page])) {
+        else if (kerdx.isset(this[page])) {
             this[page](mainBody.find('#main-container-body-main-window'));
         }
         else {
@@ -33,7 +33,11 @@ class Items {
     }
 
     view(container) {
-        system.get({ collection: 'items', query: {}, projection: { code: 1, name: 1, min: '1', max: 1, count: 1, unit: 1 }, many: true }).then(result => {
+        system.get({ collection: 'items', query: {}, projection: { code: 1, name: 1, min: '1', max: 1, count: 1, unit: 1, recycled: 1 }, many: true }).then(result => {
+            result = kerdx.array.findAll(result, item => {
+                return item.recycled == undefined || item.recycled == false;
+            });
+
             for (let i in result) {
                 if (result[i].count <= result[i].min) {
                     result[i].range = 'Low';
@@ -47,29 +51,29 @@ class Items {
                 delete result[i].min;
                 delete result[i].max;
             }
-            let itemsTable = perceptor.createTable({ title: 'Items Table', contents: result, search: true, sort: true, filter: ['All', 'Enough', 'Excess', 'Low'] });
+            let itemsTable = kerdx.createTable({ title: 'Items Table', contents: result, search: true, sort: true, filter: ['All', 'Enough', 'Excess', 'Low'] });
             container.render(itemsTable);
-            perceptor.listenTable({ options: ['view', 'clone', 'delete'], table: itemsTable }, {
+            kerdx.listenTable({ options: ['view', 'clone', 'delete'], table: itemsTable }, {
                 click: event => {
                     let target = event.target;
-                    let { row } = target.getParents('.perceptor-table-column-cell').dataset;
-                    let table = target.getParents('.perceptor-table');
-                    let id = table.find(`.perceptor-table-column[data-name="_id"]`).find(`.perceptor-table-column-cell[data-row="${row}"]`).dataset.value;
+                    let { row } = target.getParents('.kerdx-table-column-cell').dataset;
+                    let table = target.getParents('.kerdx-table');
+                    let id = table.find(`.kerdx-table-column[data-name="_id"]`).find(`.kerdx-table-column-cell[data-row="${row}"]`).dataset.value;
 
-                    if (target.id == 'perceptor-table-option-view') {
+                    if (target.id == 'kerdx-table-option-view') {
                         system.redirect('items.html?page=show&id=' + id);
                     }
-                    else if (target.id == 'perceptor-table-option-clone') {
+                    else if (target.id == 'kerdx-table-option-clone') {
                         system.redirect('items.html?page=clone&id=' + id);
                     }
-                    else if (target.id == 'perceptor-table-option-delete') {
+                    else if (target.id == 'kerdx-table-option-delete') {
                         system.redirect('items.html?page=delete&id=' + id);
                     }
                 },
 
                 filter: (sortValue, row) => {
                     let hide = false;
-                    let cell = perceptor.array.find(row, value => {
+                    let cell = kerdx.array.find(row, value => {
                         return value.dataset.name == 'range';
                     });
 
@@ -153,7 +157,7 @@ class Items {
             ]);
 
             container.find('#edit-item-image').addEventListener('click', event => {
-                let uploadImageForm = perceptor.createElement({
+                let uploadImageForm = kerdx.createElement({
                     element: 'form', attributes: { class: 'single-upload-form' }, children: [
                         {
                             element: 'span', attributes: { class: 'single-upload-form-controls' }, children: [
@@ -167,7 +171,7 @@ class Items {
                     ]
                 });
 
-                let popUp = perceptor.popUp(uploadImageForm);
+                let popUp = kerdx.popUp(uploadImageForm);
 
                 uploadImageForm.find('#new-image').onChanged(value => {
                     uploadImageForm.find('#preview-image').src = value.src;
@@ -175,7 +179,7 @@ class Items {
 
                 uploadImageForm.find('#upload').addEventListener('click', event => {
                     event.preventDefault();
-                    let data = perceptor.jsonForm(uploadImageForm);
+                    let data = kerdx.jsonForm(uploadImageForm);
                     data.action = 'changeItemImage';
                     data.id = id;
 
@@ -208,14 +212,14 @@ class Items {
     }
 
     makeItem(form, categoryNames, tagNames) {
-        let loading = perceptor.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
+        let loading = kerdx.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
 
         form.getState({ name: 'submit' }).addEventListener('click', event => {
             event.preventDefault();
             form.getState({ name: 'submit' }).replaceWith(loading);
             form.setState({ name: 'error', attributes: { style: { display: 'none' } }, text: '' });
 
-            let formValidation = perceptor.validateForm(form, { nodeNames: ['INPUT', 'select-element'] });
+            let formValidation = kerdx.validateForm(form, { nodeNames: ['INPUT', 'select-element'] });
 
             if (!formValidation.flag) {
                 loading.replaceWith(form.getState({ name: 'submit' }));
@@ -229,12 +233,16 @@ class Items {
                 return;
             }
 
-            let data = perceptor.jsonForm(form);
+            let data = kerdx.jsonForm(form);
             data.action = 'createItem';
 
             let categories = form.find('#categories').value;
             data.newCats = [];
             data.categories = [];
+
+            let tags = form.find('#tags').value;
+            data.newTags = [];
+            data.tags = [];
 
             for (let i of categories) {
                 i = i.trim();
@@ -248,10 +256,6 @@ class Items {
                 }
             }
 
-            let tags = form.find('#tags').value;
-            data.newTags = [];
-            data.tags = [];
-
             for (let i of tags) {
                 i = i.trim();
                 if (i != '') {
@@ -259,7 +263,7 @@ class Items {
                         data.tags.push(i)
                     }
                     else {
-                        data.newtags.push(i);
+                        data.newTags.push(i);
                     }
                 }
             }
@@ -272,8 +276,8 @@ class Items {
                     system.notify({ note: 'Item Created' });
                     window.history.go(-1);
                 }
-                else if (perceptor.isset(result.found)) {
-                    form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `${perceptor.camelCasedToText(result.found).toUpperCase()} is already in use` });
+                else if (kerdx.isset(result.found)) {
+                    form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `${kerdx.camelCasedToText(result.found).toUpperCase()} is already in use` });
                 }
                 else {
                     form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `Error Unknown` });
@@ -290,11 +294,11 @@ class Items {
         run.tags = system.get({ collection: 'tags', query: {}, projection: { name: 1 }, many: true });
         run.item = system.get({ collection: 'items', query: { _id: id }, changeQuery: { _id: 'objectid' } });
 
-        perceptor.runParallel(run, result => {
-            let categoryNames = perceptor.object.objectOfObjectArray(result.categories, '_id', 'name');
-            let tagNames = perceptor.object.objectOfObjectArray(result.tags, '_id', 'name');
+        kerdx.runParallel(run, result => {
+            let categoryNames = kerdx.object.objectOfObjectArray(result.categories, '_id', 'name');
+            let tagNames = kerdx.object.objectOfObjectArray(result.tags, '_id', 'name');
 
-            let editForm = perceptor.createForm({
+            let editForm = kerdx.createForm({
                 title: 'Edit Item', attributes: { enctype: 'multipart/form-data', id: 'edit-item-form', class: 'form', style: { border: '1px solid var(--secondary-color)', maxWidth: '100%' } },
                 contents: {
                     name: { element: 'input', attributes: { id: 'name', name: 'name', value: result.item.name } },
@@ -316,13 +320,13 @@ class Items {
 
             container.makeElement(editForm);
 
-            let loading = perceptor.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
+            let loading = kerdx.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
 
             editForm.addEventListener('submit', event => {
                 event.preventDefault();
                 editForm.getState({ name: 'submit' }).replaceWith(loading);
                 editForm.setState({ name: 'error', attributes: { style: { display: 'none' } }, text: '' });
-                let formValidation = perceptor.validateForm(editForm, { nodeNames: ['INPUT', 'select-element'] });
+                let formValidation = kerdx.validateForm(editForm, { nodeNames: ['INPUT', 'select-element'] });
 
                 if (!formValidation.flag) {
                     loading.replaceWith(editForm.getState({ name: 'submit' }));
@@ -336,7 +340,7 @@ class Items {
                     return;
                 }
 
-                let data = perceptor.jsonForm(editForm);
+                let data = kerdx.jsonForm(editForm);
                 data.action = 'editItem';
                 data.id = id;
 
@@ -378,8 +382,8 @@ class Items {
                         system.notify({ note: 'Item Updated' });
                         window.history.go(-1);
                     }
-                    else if (perceptor.isset(result.found)) {
-                        editForm.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `${perceptor.camelCasedToText(result.found).toUpperCase()} is already in use` });
+                    else if (kerdx.isset(result.found)) {
+                        editForm.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `${kerdx.camelCasedToText(result.found).toUpperCase()} is already in use` });
                     }
                     else {
                         editForm.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `Error Unknown` });
@@ -397,11 +401,11 @@ class Items {
         run.tags = system.get({ collection: 'tags', query: {}, projection: { name: 1 }, many: true });
         run.item = system.get({ collection: 'items', query: { _id: id }, changeQuery: { _id: 'objectid' } });
 
-        perceptor.runParallel(run, result => {
-            let categoryNames = perceptor.object.objectOfObjectArray(result.categories, '_id', 'name');
-            let tagNames = perceptor.object.objectOfObjectArray(result.tags, '_id', 'name');
+        kerdx.runParallel(run, result => {
+            let categoryNames = kerdx.object.objectOfObjectArray(result.categories, '_id', 'name');
+            let tagNames = kerdx.object.objectOfObjectArray(result.tags, '_id', 'name');
 
-            let cloneForm = perceptor.createForm({
+            let cloneForm = kerdx.createForm({
                 title: 'Clone Item', attributes: { enctype: 'multipart/form-data', id: 'clone-item-form', class: 'form', style: { border: '1px solid var(--secondary-color)', maxWidth: '100%' } },
                 contents: {
                     name: { element: 'input', attributes: { id: 'name', name: 'name', value: result.item.name } },
@@ -433,11 +437,11 @@ class Items {
         run.categories = system.get({ collection: 'categories', query: {}, projection: { name: 1 }, many: true });
         run.tags = system.get({ collection: 'tags', query: {}, projection: { name: 1 }, many: true });
 
-        perceptor.runParallel(run, result => {
-            let categoryNames = perceptor.object.objectOfObjectArray(result.categories, '_id', 'name');
-            let tagNames = perceptor.object.objectOfObjectArray(result.tags, '_id', 'name');
+        kerdx.runParallel(run, result => {
+            let categoryNames = kerdx.object.objectOfObjectArray(result.categories, '_id', 'name');
+            let tagNames = kerdx.object.objectOfObjectArray(result.tags, '_id', 'name');
 
-            let createForm = perceptor.createForm({
+            let createForm = kerdx.createForm({
                 title: 'Create Item', attributes: { enctype: 'multipart/form-data', id: 'create-item-form', class: 'form', style: { border: '1px solid var(--secondary-color)', maxWidth: '100%' } },
                 contents: {
                     name: { element: 'input', attributes: { id: 'name', name: 'name' } },

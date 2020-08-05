@@ -1,12 +1,12 @@
 let customForms = (mainBody) => {
     let settingsMainWindow = mainBody.find('#settings-main-window');
-    let loading = perceptor.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
+    let loading = kerdx.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
 
-    let urlVars = perceptor.urlSplitter(location.href);
+    let urlVars = kerdx.urlSplitter(location.href);
     let dataContainer, taskContainer, targets = [];
 
     let makeData = (form, callback, data) => {
-        let popUp = perceptor.popUp(form);
+        let popUp = kerdx.popUp(form);
         data = data || {};
         form.find('#set-source').addEventListener('click', event => {
             system.setSources((source, type) => {
@@ -24,7 +24,7 @@ let customForms = (mainBody) => {
         form.addEventListener('submit', event => {
             event.preventDefault();
 
-            let formValidation = perceptor.validateForm(form);
+            let formValidation = kerdx.validateForm(form);
 
             if (!formValidation.flag) {
                 form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `Form ${formValidation.elementName} is faulty` });
@@ -39,18 +39,18 @@ let customForms = (mainBody) => {
                 }
             }
 
-            callback(perceptor.jsonForm(form));
+            callback(kerdx.jsonForm(form));
             popUp.remove();
         });
     }
 
     let editData = (data, callback) => {
-        let editDataForm = perceptor.createForm({
+        let editDataForm = kerdx.createForm({
             title: 'Edit Data', attributes: { enctype: 'multipart/form-data', id: 'create-edit-data-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name', value: data.name }, list: targets },
                 type: { element: 'select', attributes: { id: 'type', name: 'type', ignore: true }, options: ['Null', 'Text', 'Number', 'Date', 'Time', 'File', 'Link'], selected: data.type },
-                source: { element: 'input', attributes: { id: 'source', name: 'source', value: data.source, ignore: true }, label: perceptor.createElement({ element: 'a', text: 'Source', children: [{ element: 'i', attributes: { class: 'icon fas fa-plus', id: 'set-source', ignore: true } }] }).innerHTML },
+                source: { element: 'input', attributes: { id: 'source', name: 'source', value: data.source, ignore: true }, label: kerdx.createElement({ element: 'a', text: 'Source', children: [{ element: 'i', attributes: { class: 'icon fas fa-plus', id: 'set-source', ignore: true } }] }).innerHTML },
                 multiple: { element: 'select', attributes: { id: 'multiple', name: 'multiple', ignore: true }, options: ['Null', 'True', 'False'], selected: data.multiple },
                 show: { element: 'select', attributes: { id: 'show', name: 'show' }, options: ['False', 'True'], selected: data.show }
             },
@@ -63,12 +63,12 @@ let customForms = (mainBody) => {
     };
 
     let cloneData = (data, callback) => {
-        let cloneDataForm = perceptor.createForm({
+        let cloneDataForm = kerdx.createForm({
             title: 'Clone Data', attributes: { enctype: 'multipart/form-data', id: 'create-clone-data-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name', value: data.name } },
                 type: { element: 'select', attributes: { id: 'type', name: 'type', ignore: true }, options: ['Null', 'Text', 'Number', 'Date', 'Time', 'File', 'Link'], selected: data.type },
-                source: { element: 'input', attributes: { id: 'source', name: 'source', value: data.source, ignore: true }, label: perceptor.createElement({ element: 'a', text: 'Source', children: [{ element: 'i', attributes: { class: 'icon fas fa-plus', id: 'set-source', ignore: true } }] }).innerHTML },
+                source: { element: 'input', attributes: { id: 'source', name: 'source', value: data.source, ignore: true }, label: kerdx.createElement({ element: 'a', text: 'Source', children: [{ element: 'i', attributes: { class: 'icon fas fa-plus', id: 'set-source', ignore: true } }] }).innerHTML },
                 multiple: { element: 'select', attributes: { id: 'multiple', name: 'multiple', ignore: true }, options: ['Null', 'True', 'False'], selected: data.multiple },
                 show: { element: 'select', attributes: { id: 'show', name: 'show' }, options: ['False', 'True'], selected: data.show }
             },
@@ -81,12 +81,12 @@ let customForms = (mainBody) => {
     };
 
     let createData = (callback) => {
-        let createDataForm = perceptor.createForm({
+        let createDataForm = kerdx.createForm({
             title: 'Create Data', attributes: { enctype: 'multipart/form-data', id: 'create-create-data-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name' } },
                 type: { element: 'select', attributes: { id: 'type', name: 'type', ignore: true }, options: ['Null', 'Text', 'Number', 'Date', 'Time', 'File', 'Link'] },
-                source: { element: 'input', attributes: { id: 'source', name: 'source', ignore: true }, label: perceptor.createElement({ element: 'a', text: 'Source', children: [{ element: 'i', attributes: { class: 'icon fas fa-plus', id: 'set-source' } }] }).innerHTML },
+                source: { element: 'input', attributes: { id: 'source', name: 'source', ignore: true }, label: kerdx.createElement({ element: 'a', text: 'Source', children: [{ element: 'i', attributes: { class: 'icon fas fa-plus', id: 'set-source' } }] }).innerHTML },
                 multiple: { element: 'select', attributes: { id: 'multiple', name: 'multiple', ignore: true }, options: ['Null', 'True', 'False'] },
                 show: { element: 'select', attributes: { id: 'show', name: 'show' }, options: ['False', 'True'] }
             },
@@ -99,13 +99,13 @@ let customForms = (mainBody) => {
     }
 
     let getTask = (table, tasks, callback) => {
-        let taskWindow = perceptor.picker({ contents: Object.keys(tasks) }, picked => {
+        let taskWindow = kerdx.picker({ contents: Object.keys(tasks) }, picked => {
             let count = prompt('How many of this tasks');
-            perceptor.runParallel({ ids: system.get({ collection: table, query: {}, projection: { _id: 1 }, many: true }) }, result => {
+            kerdx.runParallel({ ids: system.get({ collection: table, query: {}, projection: { _id: 1 }, many: true }) }, result => {
                 let generatedTasks = [];
                 for (let i = 0; i < count; i++) {
-                    let task = perceptor.createElement(tasks[picked]);
-                    task.find('.task-id').setOptions(perceptor.object.valueOfObjectArray(result.ids, '_id'));
+                    let task = kerdx.createElement(tasks[picked]);
+                    task.find('.task-id').setOptions(kerdx.object.valueOfObjectArray(result.ids, '_id'));
                     generatedTasks.push(task);
                 }
                 callback(generatedTasks);
@@ -113,13 +113,13 @@ let customForms = (mainBody) => {
             });
         });
 
-        let taskPopup = perceptor.popUp(taskWindow);
+        let taskPopup = kerdx.popUp(taskWindow);
     }
 
     let preview = (form) => {
         let runSources = {};
         let allSources = {};
-        let data = perceptor.jsonForm(form);
+        let data = kerdx.jsonForm(form);
         data.contents = compileData(form);
         data.tasks = compileTasks(form);
 
@@ -139,7 +139,7 @@ let customForms = (mainBody) => {
                 }
             }
 
-            let previewForm = perceptor.createForm({
+            let previewForm = kerdx.createForm({
                 title: data.title, columns: data.columns, attributes: { class: 'form' },
                 contents: data.contents,
                 buttons: {
@@ -148,14 +148,14 @@ let customForms = (mainBody) => {
                     },
                     actions: {
                         element: 'div', attributes: { id: 'single-form-actions-container' }, children: [
-                            { element: 'i', attributes: { id: 'add-single-form-task', class: 'action', title: 'Add New Task', 'data-icon': perceptor.icons.plus } },
+                            { element: 'i', attributes: { id: 'add-single-form-task', class: 'action', title: 'Add New Task', 'data-icon': kerdx.icons.plus } },
                         ]
                     },
                     submit: { element: 'button', attributes: {}, text: 'Submit' }
                 }
             });
 
-            let table = perceptor.inBetween(data.target, '$#&{', '}&#$');
+            let table = kerdx.inBetween(data.target, '$#&{', '}&#$');
             try {
                 table = JSON.parse(table).collection;
             } catch (error) {
@@ -179,7 +179,7 @@ let customForms = (mainBody) => {
                 previewForm.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: 'Form previewing' });
             });
 
-            perceptor.popUp(previewForm).find('#toggle-window').click();
+            kerdx.popUp(previewForm).find('#toggle-window').click();
         });
     }
 
@@ -214,7 +214,7 @@ let customForms = (mainBody) => {
     }
 
     let createTask = (callback) => {
-        let createTaskForm = perceptor.createForm({
+        let createTaskForm = kerdx.createForm({
             title: 'Create Task', attributes: { enctype: 'multipart/form-data', id: 'create-create-task-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name' } },
@@ -231,7 +231,7 @@ let customForms = (mainBody) => {
     }
 
     let cloneTask = (task, callback) => {
-        let cloneTaskForm = perceptor.createForm({
+        let cloneTaskForm = kerdx.createForm({
             title: 'Clone Task', attributes: { enctype: 'multipart/form-data', id: 'create-clone-task-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name', value: task.name } },
@@ -248,7 +248,7 @@ let customForms = (mainBody) => {
     };
 
     let editTask = (task, callback) => {
-        let editTaskForm = perceptor.createForm({
+        let editTaskForm = kerdx.createForm({
             title: 'Edit Task', attributes: { enctype: 'multipart/form-data', id: 'create-edit-task-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name', value: task.name } },
@@ -265,13 +265,13 @@ let customForms = (mainBody) => {
     };
 
     let makeTask = (form, callback, data) => {
-        let popUp = perceptor.popUp(form, { title: 'Form Task' });
+        let popUp = kerdx.popUp(form, { title: 'Form Task' });
         data = data || {};
 
         form.addEventListener('submit', event => {
             event.preventDefault();
 
-            let formValidation = perceptor.validateForm(form);
+            let formValidation = kerdx.validateForm(form);
 
             if (!formValidation.flag) {
                 form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `Form ${formValidation.elementName} is faulty` });
@@ -286,7 +286,7 @@ let customForms = (mainBody) => {
                 }
             }
 
-            callback(perceptor.jsonForm(form));
+            callback(kerdx.jsonForm(form));
             popUp.remove();
         });
     }
@@ -336,10 +336,10 @@ let customForms = (mainBody) => {
                                         }
                                     ]
                                 },
-                                perceptor.createTable({
+                                kerdx.createTable({
                                     title: 'Form Data', contents: customform.contents, sort: true
                                 }),
-                                perceptor.createTable({
+                                kerdx.createTable({
                                     title: 'Form Tasks', contents: customform.tasks, sort: true
                                 })
                             ]
@@ -360,12 +360,12 @@ let customForms = (mainBody) => {
 
     let clone = (id) => {
         system.get({ collection: 'customforms', query: { _id: id }, projection: { image: 0 }, changeQuery: { _id: 'objectid' } }).then(customform => {
-            let cloneForm = perceptor.createForm({
+            let cloneForm = kerdx.createForm({
                 title: 'Clone Form', attributes: { enctype: 'multipart/form-data', id: 'clone-custom-form-form', class: 'form' },
                 contents: {
                     name: { element: 'input', attributes: { id: 'name', name: 'name', value: customform.name } },
                     title: { element: 'input', attributes: { id: 'title', name: 'title', value: customform.title } },
-                    target: { element: 'input', attributes: { id: 'target', name: 'target', value: customform.target, ignore: true }, label: perceptor.createElement({ element: 'a', text: 'Target', children: [{ element: 'i', attributes: { class: 'icon fas fa-plus', id: 'set-target', ignore: true } }] }).innerHTML },
+                    target: { element: 'input', attributes: { id: 'target', name: 'target', value: customform.target, ignore: true }, label: kerdx.createElement({ element: 'a', text: 'Target', children: [{ element: 'i', attributes: { class: 'icon fas fa-plus', id: 'set-target', ignore: true } }] }).innerHTML },
                     columns: { element: 'input', attributes: { id: 'columns', name: 'columns', type: 'number', ignore: true } }
                 },
                 buttons: {
@@ -379,17 +379,17 @@ let customForms = (mainBody) => {
                     },
                     'actions': {
                         element: 'div', attributes: { id: 'single-form-actions-container' }, children: [
-                            { element: 'i', attributes: { id: 'single-form-data', class: 'action', title: 'Add Data', 'data-icon': perceptor.icons.plus } },
-                            { element: 'i', attributes: { id: 'single-form-task', class: 'action', title: 'Add Task', 'data-icon': perceptor.icons.tasks } },
-                            { element: 'i', attributes: { id: 'preview-icon', class: 'action', title: 'Preview Form', 'data-icon': perceptor.icons.eye } }
+                            { element: 'i', attributes: { id: 'single-form-data', class: 'action', title: 'Add Data', 'data-icon': kerdx.icons.plus } },
+                            { element: 'i', attributes: { id: 'single-form-task', class: 'action', title: 'Add Task', 'data-icon': kerdx.icons.tasks } },
+                            { element: 'i', attributes: { id: 'preview-icon', class: 'action', title: 'Preview Form', 'data-icon': kerdx.icons.eye } }
                         ]
                     },
                     submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Clone', state: { name: 'submit', owner: '#clone-custom-form-form' } },
                 }, columns: 2
             });
 
-            dataContainer = cloneForm.find('.perceptor-form-buttons').find('#data-container');
-            taskContainer = cloneForm.find('.perceptor-form-buttons').find('#tasks-container');
+            dataContainer = cloneForm.find('.kerdx-form-buttons').find('#data-container');
+            taskContainer = cloneForm.find('.kerdx-form-buttons').find('#tasks-container');
 
             for (let content of customform.contents) {
                 renderData(content, dataContainer);
@@ -399,7 +399,7 @@ let customForms = (mainBody) => {
                 renderTask(task, taskContainer);
             }
 
-            let popUp = perceptor.popUp(cloneForm);
+            let popUp = kerdx.popUp(cloneForm);
             popUp.find('#toggle-window').click();
 
             make(cloneForm);
@@ -407,12 +407,12 @@ let customForms = (mainBody) => {
     }
 
     let edit = (customform) => {
-        let editForm = perceptor.createForm({
+        let editForm = kerdx.createForm({
             title: 'Edit Form', attributes: { enctype: 'multipart/form-data', id: 'edit-custom-form-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name', value: customform.name } },
                 title: { element: 'input', attributes: { id: 'title', name: 'title', value: customform.title } },
-                target: { element: 'input', attributes: { id: 'target', name: 'target', value: customform.target, ignore: true }, label: perceptor.createElement({ element: 'a', text: 'Target', children: [{ element: 'i', attributes: { class: 'icon fas fa-plus', id: 'set-target', ignore: true } }] }).innerHTML },
+                target: { element: 'input', attributes: { id: 'target', name: 'target', value: customform.target, ignore: true }, label: kerdx.createElement({ element: 'a', text: 'Target', children: [{ element: 'i', attributes: { class: 'icon fas fa-plus', id: 'set-target', ignore: true } }] }).innerHTML },
                 columns: { element: 'input', attributes: { id: 'columns', name: 'columns', type: 'number', ignore: true, value: customform.columns } }
             },
             buttons: {
@@ -426,17 +426,17 @@ let customForms = (mainBody) => {
                 },
                 'actions': {
                     element: 'div', attributes: { id: 'single-form-actions-container' }, children: [
-                        { element: 'i', attributes: { id: 'single-form-data', class: 'action', title: 'Add Data', 'data-icon': perceptor.icons.plus } },
-                        { element: 'i', attributes: { id: 'single-form-task', class: 'action', title: 'Add Task', 'data-icon': perceptor.icons.tasks } },
-                        { element: 'i', attributes: { id: 'preview-icon', class: 'action', title: 'Preview Form', 'data-icon': perceptor.icons.eye } }
+                        { element: 'i', attributes: { id: 'single-form-data', class: 'action', title: 'Add Data', 'data-icon': kerdx.icons.plus } },
+                        { element: 'i', attributes: { id: 'single-form-task', class: 'action', title: 'Add Task', 'data-icon': kerdx.icons.tasks } },
+                        { element: 'i', attributes: { id: 'preview-icon', class: 'action', title: 'Preview Form', 'data-icon': kerdx.icons.eye } }
                     ]
                 },
                 submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Edit', state: { name: 'submit', owner: '#edit-custom-form-form' } },
             }, columns: 2
         });
 
-        dataContainer = editForm.find('.perceptor-form-buttons').find('#data-container');
-        taskContainer = editForm.find('.perceptor-form-buttons').find('#tasks-container');
+        dataContainer = editForm.find('.kerdx-form-buttons').find('#data-container');
+        taskContainer = editForm.find('.kerdx-form-buttons').find('#tasks-container');
 
         for (let content of customform.contents) {
             renderData(content, dataContainer);
@@ -446,19 +446,19 @@ let customForms = (mainBody) => {
             renderTask(task, taskContainer);
         }
 
-        let popUp = perceptor.popUp(editForm);
+        let popUp = kerdx.popUp(editForm);
         popUp.find('#toggle-window').click();
 
         make(editForm, customform._id);
     }
 
     let create = () => {
-        let createForm = perceptor.createForm({
+        let createForm = kerdx.createForm({
             title: 'Create Form', attributes: { enctype: 'multipart/form-data', id: 'create-custom-form-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name' } },
                 title: { element: 'input', attributes: { id: 'title', name: 'title' } },
-                target: { element: 'input', attributes: { id: 'target', name: 'target', ignore: true }, label: perceptor.createElement({ element: 'a', text: 'Target', children: [{ element: 'i', attributes: { class: 'icon fas fa-plus', id: 'set-target', ignore: true } }] }).innerHTML },
+                target: { element: 'input', attributes: { id: 'target', name: 'target', ignore: true }, label: kerdx.createElement({ element: 'a', text: 'Target', children: [{ element: 'i', attributes: { class: 'icon fas fa-plus', id: 'set-target', ignore: true } }] }).innerHTML },
                 columns: { element: 'input', attributes: { id: 'columns', name: 'columns', type: 'number', ignore: true } }
             },
             buttons: {
@@ -472,19 +472,19 @@ let customForms = (mainBody) => {
                 },
                 'actions': {
                     element: 'div', attributes: { id: 'single-form-actions-container' }, children: [
-                        { element: 'i', attributes: { id: 'single-form-data', class: 'action', title: 'Add Data', 'data-icon': perceptor.icons.plus } },
-                        { element: 'i', attributes: { id: 'single-form-task', class: 'action', title: 'Add Task', 'data-icon': perceptor.icons.tasks } },
-                        { element: 'i', attributes: { id: 'preview-icon', class: 'action', title: 'Preview Form', 'data-icon': perceptor.icons.eye } }
+                        { element: 'i', attributes: { id: 'single-form-data', class: 'action', title: 'Add Data', 'data-icon': kerdx.icons.plus } },
+                        { element: 'i', attributes: { id: 'single-form-task', class: 'action', title: 'Add Task', 'data-icon': kerdx.icons.tasks } },
+                        { element: 'i', attributes: { id: 'preview-icon', class: 'action', title: 'Preview Form', 'data-icon': kerdx.icons.eye } }
                     ]
                 },
                 submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Create', state: { name: 'submit', owner: '#create-custom-form-form' } },
             }, columns: 2
         });
 
-        let popUp = perceptor.popUp(createForm);
+        let popUp = kerdx.popUp(createForm);
         popUp.find('#toggle-window').click();
-        dataContainer = createForm.find('.perceptor-form-buttons').find('#data-container');
-        taskContainer = createForm.find('.perceptor-form-buttons').find('#task-container');
+        dataContainer = createForm.find('.kerdx-form-buttons').find('#data-container');
+        taskContainer = createForm.find('.kerdx-form-buttons').find('#task-container');
 
         make(createForm);
     }
@@ -497,9 +497,9 @@ let customForms = (mainBody) => {
     }
 
     let make = (form, id) => {
-        dataContainer = form.find('.perceptor-form-buttons').find('#data-container');
+        dataContainer = form.find('.kerdx-form-buttons').find('#data-container');
         let updateTarget = (targetName) => {
-            targetName = perceptor.inBetween(targetName, '$#&{', '}&#$');
+            targetName = kerdx.inBetween(targetName, '$#&{', '}&#$');
             try {
                 targetName = JSON.parse(targetName).collection;
             } catch (error) {
@@ -587,7 +587,7 @@ let customForms = (mainBody) => {
         form.addEventListener('submit', event => {
             event.preventDefault();
 
-            let formValidation = perceptor.validateForm(form);
+            let formValidation = kerdx.validateForm(form);
 
             if (!formValidation.flag) {
                 loading.replaceWith(form.getState({ name: 'submit' }));
@@ -595,7 +595,7 @@ let customForms = (mainBody) => {
                 return;
             }
 
-            let data = perceptor.jsonForm(form);
+            let data = kerdx.jsonForm(form);
             data.contents = [];
             let allData = dataContainer.findAll('.single-form-data');
             for (let i = 0; i < allData.length; i++) {
@@ -613,28 +613,28 @@ let customForms = (mainBody) => {
                 return;
             }
 
-            data.action = perceptor.isset(id) ? 'editCustomForm' : 'createCustomForm';
-            if (perceptor.isset(id)) data.id = id
+            data.action = kerdx.isset(id) ? 'editCustomForm' : 'createCustomForm';
+            if (kerdx.isset(id)) data.id = id
             data.contents = JSON.stringify(data.contents);
             data.tasks = JSON.stringify(data.tasks);
 
             system.connect({ data }).then(result => {
                 if (result == 1) {
-                    system.notify({ note: `Custom Form ${perceptor.isset(id) ? 'Editted' : 'Created'}` });
+                    system.notify({ note: `Custom Form ${kerdx.isset(id) ? 'Editted' : 'Created'}` });
                     reload();
                 }
                 else if (result.found) {
                     system.notify({ note: `${result.found} already in exists` });
                 }
                 else {
-                    system.notify({ note: `Custom Form was not ${perceptor.isset(id) ? 'Editted' : 'Created'}` });
+                    system.notify({ note: `Custom Form was not ${kerdx.isset(id) ? 'Editted' : 'Created'}` });
                 }
             });
         });
     }
 
     let getReadable = (data, type) => {
-        let readable = perceptor.createElement({ element: 'span', attributes: { id: `readable${type}`, class: `readable-${type}-container` } });
+        let readable = kerdx.createElement({ element: 'span', attributes: { id: `readable${type}`, class: `readable-${type}-container` } });
 
         for (let name in data) {
             let aRead = readable.makeElement({
@@ -685,7 +685,7 @@ let customForms = (mainBody) => {
         newTask.value = task;
     }
 
-    if (!perceptor.isset(urlVars.vars.action) || urlVars.vars.action == 'view') {
+    if (!kerdx.isset(urlVars.vars.action) || urlVars.vars.action == 'view') {
         settingsMainWindow.makeElement([
             {
                 element: 'div', attributes: { class: 'settings-sub-menu' }, children: [
@@ -698,26 +698,31 @@ let customForms = (mainBody) => {
         ]);
         let mainContentWindow = settingsMainWindow.find('.settings-content-window');
 
-        system.get({ collection: 'customforms', query: {}, projection: { name: 1, title: 1 }, many: true }).then(customforms => {
-            let customformsTable = perceptor.createTable({
+        system.get({ collection: 'customforms', query: {}, projection: { name: 1, title: 1 , recycled: 1}, many: true }).then(customforms => {
+            
+            customForms = kerdx.array.findAll(customForms, item => {
+                return item.recycled == undefined || item.recycled == false;
+            });
+
+            let customformsTable = kerdx.createTable({
                 title: 'All Custom Forms', contents: customforms, search: true, sort: true
             });
 
             mainContentWindow.render(customformsTable);
-            perceptor.listenTable({ options: ['view', 'clone', 'delete'], table: customformsTable }, {
+            kerdx.listenTable({ options: ['view', 'clone', 'delete'], table: customformsTable }, {
                 click: event => {
                     let target = event.target;
-                    let { row } = target.getParents('.perceptor-table-column-cell').dataset;
-                    let table = target.getParents('.perceptor-table');
-                    let id = table.find(`.perceptor-table-column[data-name="_id"]`).find(`.perceptor-table-column-cell[data-row="${row}"]`).dataset.value;
+                    let { row } = target.getParents('.kerdx-table-column-cell').dataset;
+                    let table = target.getParents('.kerdx-table');
+                    let id = table.find(`.kerdx-table-column[data-name="_id"]`).find(`.kerdx-table-column-cell[data-row="${row}"]`).dataset.value;
 
-                    if (target.id == 'perceptor-table-option-view') {
+                    if (target.id == 'kerdx-table-option-view') {
                         system.redirect('settings.html?page=forms&action=show&id=' + id);
                     }
-                    else if (target.id == 'perceptor-table-option-clone') {
+                    else if (target.id == 'kerdx-table-option-clone') {
                         clone(id);
                     }
-                    else if (target.id == 'perceptor-table-option-delete') {
+                    else if (target.id == 'kerdx-table-option-delete') {
                         system.redirect('settings.html?page=forms&action=delete&id=' + id);
                     }
                 }

@@ -18,12 +18,12 @@ class History {
             }
         ]);
 
-        this.url = perceptor.urlSplitter(location.href);
+        this.url = kerdx.urlSplitter(location.href);
         let page = this.url.vars.page;
         if (!Object.values(this.url.vars).length) {
             this.view(mainBody.find('#history-main-window'));
         }
-        else if (perceptor.isset(this[page])) {
+        else if (kerdx.isset(this[page])) {
             this[page](mainBody.find('#history-main-window'));
         }
         else {
@@ -34,51 +34,51 @@ class History {
     view(container) {
         system.get({ collection: 'history', query: {}, projection: {}, many: true }).then(result => {
 
-            let historyTable = perceptor.createTable({ title: 'Items Table', contents: result, search: true, sort: true, filter: ['All', 'Enough', 'Excess', 'Low'], projection: { action: 1, timeCreated: 1, by: 1 } });
+            let historyTable = kerdx.createTable({ title: 'Items Table', contents: result, search: true, sort: true, filter: ['All', 'Enough', 'Excess', 'Low'], projection: { action: 1, timeCreated: 1, by: 1 } });
             container.render(historyTable);
 
-            let performers = perceptor.array.toSet(perceptor.object.valueOfObjectArray(result, 'by'));//get the performers set
+            let performers = kerdx.array.toSet(kerdx.object.valueOfObjectArray(result, 'by'));//get the performers set
 
             let run = {};
             for (let p of performers) {
                 run[p] = system.get({ collection: 'users', query: { _id: p }, options: { projection: { fullName: 1, _id: 0 } }, changeQuery: { _id: 'objectid' } })
             }
 
-            let byColumns = historyTable.find(`.perceptor-table-column[data-name="by"]`).findAll('.perceptor-table-column-cell');
+            let byColumns = historyTable.find(`.kerdx-table-column[data-name="by"]`).findAll('.kerdx-table-column-cell');
 
-            perceptor.runParallel(run, ran => {
+            kerdx.runParallel(run, ran => {
                 let row;
                 let time;
                 for (let i = 0; i < byColumns.length; i++) {
-                    if (!perceptor.isnull(ran[byColumns[i].textContent])) {
+                    if (!kerdx.isnull(ran[byColumns[i].textContent])) {
                         result[i].author = ran[byColumns[i].textContent].fullName;
                         byColumns[i].textContent = ran[byColumns[i].textContent].fullName;
                     }
                     row = byColumns[i].dataset.row;
-                    time = historyTable.find(`.perceptor-table-column-cell[data-row="${row}"][data-name="timeCreated"]`);
-                    time.textContent = perceptor.time_date(time.textContent);
+                    time = historyTable.find(`.kerdx-table-column-cell[data-row="${row}"][data-name="timeCreated"]`);
+                    time.textContent = kerdx.time_date(time.textContent);
                     result[i].period = time.textContent;
                 }
             });
 
-            perceptor.listenTable({ options: ['view'], table: historyTable }, {
+            kerdx.listenTable({ options: ['view'], table: historyTable }, {
                 click: event => {
                     let target = event.target;
-                    let { row } = target.getParents('.perceptor-table-column-cell').dataset;
-                    let table = target.getParents('.perceptor-table');
-                    let id = table.find(`.perceptor-table-column[data-name="_id"]`).find(`.perceptor-table-column-cell[data-row="${row}"]`).dataset.value;
-                    let item = perceptor.array.find(result, t => {
+                    let { row } = target.getParents('.kerdx-table-column-cell').dataset;
+                    let table = target.getParents('.kerdx-table');
+                    let id = table.find(`.kerdx-table-column[data-name="_id"]`).find(`.kerdx-table-column-cell[data-row="${row}"]`).dataset.value;
+                    let item = kerdx.array.find(result, t => {
                         return t._id == id;
                     });
 
-                    if (target.id == 'perceptor-table-option-view') {
-                        this.show(item)
+                    if (target.id == 'kerdx-table-option-view') {
+                        this.show(item, result);
                     }
                 },
 
                 filter: (sortValue, row) => {
                     let hide = false;
-                    let cell = perceptor.array.find(row, value => {
+                    let cell = kerdx.array.find(row, value => {
                         return value.dataset.name == 'range';
                     });
 
@@ -98,9 +98,21 @@ class History {
         });
     }
 
-    show(event) {
-        let eventWindow = perceptor.createElement({
+    show(event, histories) {
+        let related = kerdx.array.findAll(histories, h => {
+            return h.item == event.item && h.collection == event.collection;
+        });
+
+        let position = related.indexOf(event);
+
+        let eventWindow = kerdx.createElement({
             element: 'div', attributes: { class: 'history-event' }, children: [
+                {
+                    element: 'div', attributes: { class: 'history-event-nav' }, children: [
+                        { element: 'i', attributes: { class: 'icon fas fa-arrow-left', id: 'arrow-left' } },
+                        { element: 'i', attributes: { class: 'icon fas fa-arrow-right', id: 'arrow-right' } },
+                    ]
+                },
                 {
                     element: 'div', attributes: { class: 'history-event-details' }, children: [
                         {
@@ -123,10 +135,30 @@ class History {
             ]
         });
 
-        let eventData = eventWindow.find('.history-event-data');
-        perceptor.displayData(event.data, eventData);
+        eventWindow.addEventListener('click', clicked => {
+            if (clicked.target.id == 'arrow-left') {
+                if (position == 0) {
+                    system.notify({ note: "No more histories on this item in that direction" });
+                }
+                else{
+                    this.show(related[position - 1], histories);
+                }
+            }
 
-        let popUp = perceptor.popUp(eventWindow);
+            if (clicked.target.id == 'arrow-right') {
+                if (position >= related.length - 1) {
+                    system.notify({ note: "No more histories on this item in that direction" });
+                }
+                else{
+                    this.show(related[position + 1], histories);
+                }
+            }
+        });
+
+        let eventData = eventWindow.find('.history-event-data');
+        kerdx.displayData(event.data, eventData);
+
+        let popUp = kerdx.popUp(eventWindow);
         popUp.find('#toggle-window').click();
     }
 }

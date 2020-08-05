@@ -1,16 +1,14 @@
-let JSElements = require('./../../Perceptors/back/classes/JSElements');
-class View extends JSElements {
+class View {
     // set the document on entry
     constructor(metadata, appType) {
-        super();
         this.docType = "<!DOCTYPE html>";
         this.pages = [];
-        this.object.copy(metadata, this);
+        kerds.object.copy(metadata, this);
         this.appType = appType;
     }
 
     createView(params) {
-        this.object.copy(params, this);
+        kerds.object.copy(params, this);
 
         this.response.setHeader('Content-Type', 'text/html');
         this.setupPage().then((html) => {
@@ -20,7 +18,7 @@ class View extends JSElements {
 
     setupPage() {
         return new Promise(async (resolve, reject) => {
-            let html = this.createElement({
+            let html = kerds.createElement({
                 element: 'html', children: [
                     { element: 'head' },
                     { element: 'body' },
@@ -30,11 +28,11 @@ class View extends JSElements {
             let head = html.find('head');
             let body = html.find('body');
 
-            if (perceptor.sessionsManager.sessions[this.sessionId].active) {
-                body.dataset.user = perceptor.sessionsManager.sessions[this.sessionId].user;
+            if (kerds.sessionsManager.sessions[this.sessionId].active) {
+                body.dataset.user = kerds.sessionsManager.sessions[this.sessionId].user;
 
                 let user = await db.find({ collection: 'users', query: { _id: new ObjectId(body.dataset.user) }, projection: { userType: 1, fullName: 1, userImage: 1 } });
-                if (!perceptor.isnull(user)) {
+                if (!kerds.isnull(user)) {
                     body.dataset.userType = user.userType;
                     body.dataset.fullName = user.fullName;
                     body.dataset.userImage = user.userImage;
@@ -72,7 +70,7 @@ class View extends JSElements {
                 });
             }
 
-            let urlVars = this.getUrlVars(this.request.url);
+            let urlVars = kerds.getUrlVars(this.request.url);
             if (this.appType == 'webapp') {
                 let dom = this.docType + html.outerHTML;
                 this.response.write(dom);
@@ -95,8 +93,8 @@ class View extends JSElements {
 
         let pathToModule = "./includes/pages/";
         let pathToFile = "./includes/pages/";
-        let fileModule = pathToModule + this.capitalize(file.replace(ext, '.js'));
-        file = pathToFile + this.capitalize(file.replace(ext, '.js'));
+        let fileModule = pathToModule + kerds.capitalize(file.replace(ext, '.js'));
+        file = pathToFile + kerds.capitalize(file.replace(ext, '.js'));
 
         return new Promise((resolve, reject) => {
             fs.exists(file, async (exists) => {

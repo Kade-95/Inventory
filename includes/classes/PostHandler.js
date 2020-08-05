@@ -2,8 +2,8 @@ const { ObjectID, ObjectId } = require("mongodb");
 
 class PostHandler {
     constructor() {
-        this.sessions = perceptor.sessionsManager.sessions;
-        this.ignoreActive = ['login'];
+        global.sessions = kerds.sessionsManager.sessions;
+        this.ignoreActive = ['login', 'createAccount'];
         this.adminOnly = ['createUser', 'makeAdmin', 'makeStaff', 'deleteUser'];
     }
 
@@ -11,7 +11,6 @@ class PostHandler {
         data = this.prepareData(data);
         let action = data.action;
         delete data.action;
-
         let deliver = () => {
             if (this.ignoreActive.includes(action)) {
                 this[action](req, res, data);
@@ -24,12 +23,12 @@ class PostHandler {
             }
         }
 
-        if (perceptor.isset(this[action])) {
+        if (kerds.isset(this[action])) {
             deliver();
             return
             if (this.adminOnly.includes(action)) {
-                let user = this.sessions[req.sessionId].user;
-                db.find({ collection: 'users', query: { _id: new ObjectId(this.sessions[req.sessionId].user) }, projection: { userType: 1 } }).then(result => {
+                let user = global.sessions[req.sessionId].user;
+                db.find({ collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, projection: { userType: 1 } }).then(result => {
 
                     if (result.userType == 'Admin') {
                         deliver();
@@ -55,20 +54,41 @@ class PostHandler {
         else if (params.action == 'update') {
             params.query.lastModified = new Date().getTime();
         }
+        return new Promise(async (resolve, reject) => {
+            let data, found;
+            for (let i = 0; i < params.check.length; i++) {
+                data = await db.find({ collection: params.collection, query: params.check[i], many: true });
+                data = kerds.array.find(data, d => {
+                    return d.recycled != true;
+                });
 
-        return db.ifNotExist(params);
+                found = kerds.isset(data);
+
+                if (found) {
+                    resolve({ found: Object.keys(params.check[i]) });
+                    break
+                }
+            }
+            if (!found) {
+                db[params.action](params).then(worked => {
+                    resolve(worked);
+                }).catch(error => {
+                    reject(error)
+                });
+            }
+        });
     }
 
     ifIExist(params) {
         if (params.action == 'update') {
-            if (perceptor.isset(params.option)) {
-                if (perceptor.isset(params.options['$set'])) {
+            if (kerds.isset(params.option)) {
+                if (kerds.isset(params.options['$set'])) {
                     params.options['$set'].lastModified = new Date().getTime();
                 }
-                if (perceptor.isset(params.options['$push'])) {
+                if (kerds.isset(params.options['$push'])) {
                     params.options['$push'].lastModified = new Date().getTime();
                 }
-                if (perceptor.isset(params.options['$pull'])) {
+                if (kerds.isset(params.options['$pull'])) {
                     params.options['$pull'].lastModified = new Date().getTime();
                 }
             }
@@ -104,20 +124,81 @@ class PostHandler {
         return db.update(params);
     }
 
-    login(req, res, data) {
-        if (data.email == 'admin@mail.com') {
-            let id = new ObjectID();
+    removeFromRecycleBin(req, res, data) {
+        db.delete({ collection: data.collection, query: { _id: new ObjectId(data.id) } }).then(result => {
+            this.respond(req, res, result.result.ok == 1);
+            this.makeHistory(req, result.result.ok == 1, { action: 'Removed From Recycle Bin', data, collection: data.collection, item: data.id });
+        })
+    }
 
-            this.respond(req, res, { user: id, userType: 'admin', fullName: 'prototype', image: null });
-            this.sessions[req.sessionId].set({ user: ObjectID(id).toString(), active: true });
-            return;
-        }
-        db.find({ collection: 'users', query: { email: data.email }, projection: { currentPassword: 1, userType: 1, fullName: 1, userImage: 1 } }).then(result => {
-            if (!perceptor.isnull(result)) {
+    recycle(params) {
+        params.options = { $set: { recycled: true, timeDeleted: new Date().getTime() } };
+        return db.update(params);
+    }
+
+    revert(req, res, data) {
+        this.update({ collection: data.collection, query: { _id: new ObjectId(data.id) }, options: { $set: { recycled: false, timeReverted: new Date().getTime() } } }).then(result => {
+            this.respond(req, res, (result == 1));
+            this.makeHistory(req, result == 1, { action: `Reverted`, data, collection: data.collection, item: data.id });
+        });
+    }
+
+    emptyRecycleBin(req, res, data) {
+        kerds.runParallel({
+            items: db.delete({ collection: 'items', query: { recycled: true }, many: true }),
+            categories: db.delete({ collection: 'categories', query: { recycled: true }, many: true }),
+            tags: db.delete({ collection: 'tags', query: { recycled: true }, many: true }),
+            users: db.delete({ collection: 'users', query: { recycled: true }, many: true }),
+            lists: db.delete({ collection: 'lists', query: { recycled: true }, many: true }),
+            forms: db.delete({ collection: 'forms', query: { recycled: true }, many: true }),
+            reports: db.delete({ collection: 'reports', query: { recycled: true }, many: true }),
+            customforms: db.delete({ collection: 'customforms', query: { recycled: true }, many: true }),
+            reportgenerators: db.delete({ collection: 'reportgenerators', query: { recycled: true }, many: true }),
+        }, result => {
+            this.respond(req, res, true);
+            this.makeHistory(req, true, { action: 'Empty Recycle Bin', data, item: 'System' });
+        });
+    }
+
+    createAccount(req, res, data) {
+        data.account = `${data.account}#onInventory`;
+        this.ifNotExist({ collection: 'accounts', query: { name: data.account }, check: [{ name: data.account }], action: 'insert' }).then(inserted => {
+            if (inserted == 1) {
+                db.setName(data.account);//set database name
+                db.erase().then(erased => {//erase database
+                    if (erased) {
+                        global.setUpAccount(data, user => {
+                            
+                            this.makeHistory(req, kerds.isset(user), { action: 'User Creation', data, collection: 'users', item: user._id.toString() });
+                            this.notify({ title: 'Welcome Note', note: 'Your system has been setup, Enjoy', users: [user._id.toString()] });
+
+                            global.sessions[req.sessionId].set({ user: ObjectId(user._id).toString(), active: true, account: data.account });
+
+                            delete user.currentPassword;
+                            user.user = user._id;
+                            delete user._id;
+                            this.respond(req, res, user);
+                        });
+                    }
+                });
+            }
+            else if (kerds.isset(inserted.found)) {
+                this.respond(req, res, 'found');
+            }
+
+        });
+    }
+
+    login(req, res, data) {
+        let [userName, account] = data.email.split('@');
+        account = account.slice(0, account.lastIndexOf('.')).replace('.', '#');
+        
+        db.find({ collection: 'users', query: { userName: userName }, projection: { currentPassword: 1, userType: 1, fullName: 1, userImage: 1 } }).then(result => {
+            if (!kerds.isnull(result)) {
                 bcrypt.compare(data.currentPassword, result.currentPassword).then(valid => {
                     if (valid) {
                         this.respond(req, res, { user: result._id, userType: result.userType, fullName: result.fullName, image: result.userImage });
-                        this.sessions[req.sessionId].set({ user: ObjectId(result._id).toString(), active: true });
+                        global.sessions[req.sessionId].set({ user: ObjectId(result._id).toString(), active: true, account });
                     }
                     else {
                         this.respond(req, res, 'Incorrect')
@@ -133,7 +214,7 @@ class PostHandler {
     makeHistory(req, flag, event) {
         if (flag) {
             event.timeCreated = new Date().getTime();
-            event.by = this.sessions[req.sessionId].user;
+            event.by = global.sessions[req.sessionId].user;
             db.insert({ collection: 'history', query: event });
         }
     }
@@ -144,9 +225,19 @@ class PostHandler {
 
             this.ifNotExist({ collection: 'users', query: data, check: [{ userName: data.userName }, { email: data.email }], action: 'insert', getInserted: true }).then(result => {
 
-                if (!perceptor.isset(result.found)) {
-                    this.respond(req, res, perceptor.isset(result[0]));
-                    this.makeHistory(req, perceptor.isset(result[0]), { action: 'User Creation', data, collection: 'users', item: result[0]._id.toString() });
+                if (!kerds.isset(result.found)) {
+                    this.respond(req, res, kerds.isset(result[0]));
+                    this.makeHistory(req, kerds.isset(result[0]), { action: 'User Creation', data, collection: 'users', item: result[0]._id.toString() });
+                    if (data.userType == 'Admin') {
+                        this.notify({ title: 'User type Change', note: 'You are now an Admin', users: [result[0]._id.toString()] });
+
+                        db.find({ collection: 'users', query: { userType: 'Admin' }, projection: { _id: 1 }, many: true }).then(admins => {
+                            admins = kerds.array.each(admins, a => {
+                                return a._id.toString();
+                            });
+                            this.notify({ title: 'Admin Created', note: 'A new admin has been added to the system.', link: `users.html?page=showUser&id=${result[0]._id.toString()}`, users: admins });
+                        });
+                    }
                 }
                 else {
                     this.respond(req, res, result);
@@ -158,36 +249,63 @@ class PostHandler {
     makeAdmin(req, res, data) {
         this.set({ collection: 'users', query: { _id: ObjectId(data.user) }, options: { '$set': { userType: 'Admin' } } }).then(result => {
             this.respond(req, res, result == 1);
+            data.by = global.sessions[req.sessionId].user;
             this.makeHistory(req, result == 1, { action: 'Become Admin', data, collection: 'users', item: data.user });
+
+            this.notify({ title: 'User type Change', note: 'You are now an Admin', users: [data.user] });
+
+            db.find({ collection: 'users', query: { userType: 'Admin' }, projection: { _id: 1 }, many: true }).then(admins => {
+                admins = kerds.array.each(admins, a => {
+                    return a._id.toString();
+                });
+
+                this.notify({ title: 'Admin Created', note: 'A new admin has been added to the system.', link: `users.html?page=showUser&id=${data.user}`, users: admins });
+            });
         });
     }
 
     makeStaff(req, res, data) {
         this.set({ collection: 'users', query: { _id: ObjectId(data.user) }, options: { '$set': { userType: 'Staff' } } }).then(result => {
             this.respond(req, res, result == 1);
+            data.by = global.sessions[req.sessionId].user;
             this.makeHistory(req, result == 1, { action: 'Become Staff', data, collection: 'users', item: data.user });
+
+            if (result == 1) {
+                this.notify({ title: 'User type Change', note: 'You are no longer an Admin', users: [data.user] });
+
+                db.find({ collection: 'users', query: { userType: 'Admin' }, projection: { _id: 1 }, many: true }).then(admins => {
+                    admins = kerds.array.each(admins, a => {
+                        return a._id.toString();
+                    });
+
+                    this.notify({ title: 'Admin Removal', note: 'An admin has been removed from the system system.', link: '', users: admins });
+                });
+            }
+        });
+    }
+
+    teachUser(req, res, data) {
+        this.update({ collection: 'users', query: { _id: new ObjectId(data.id), options: { $set: { taughtUser: true } } } }).then(result => {
+            this.respond(req, res, result == 1);
         });
     }
 
     deleteUser(req, res, data) {
-        db.delete({ collection: 'users', query: { _id: ObjectId(data.user) } }).then(result => {
-            perceptor.deleteRecursive(`./userdata/${data.user}`, () => {
-                this.respond(req, res, (result.result.ok == 1));
-
-                this.makeHistory(req, result.result.ok == 1, { action: 'Delete User', data, collection: 'users', item: data.user });
-            });
+        this.recycle({ collection: 'users', query: { _id: ObjectId(data.user) } }).then(result => {
+            this.respond(req, res, (result == 1));
+            this.makeHistory(req, result == 1, { action: 'Delete User', data, collection: 'users', item: data.user });
         });
     }
 
     isActive(user) {
-        return this.sessions[user].active;
+        return global.sessions[user].active;
     }
 
     isUserActive(req, res, data) {
         let active = false;
-        for (let id in this.sessions) {
-            if (this.sessions[id].user == data.user) {
-                active = this.sessions[id].active;
+        for (let id in global.sessions) {
+            if (global.sessions[id].user == data.user) {
+                active = global.sessions[id].active;
                 if (active) break;
             }
         }
@@ -202,7 +320,7 @@ class PostHandler {
 
         let prepareResult = result => {
             let preparedResult;
-            if (!perceptor.isnull(result)) {
+            if (!kerds.isnull(result)) {
                 if (Array.isArray(result)) {
                     preparedResult = [];
                     for (let i in result) {
@@ -218,7 +336,7 @@ class PostHandler {
             return preparedResult
         }
 
-        if (perceptor.isset(action)) {
+        if (kerds.isset(action)) {
             this.respond(req, res, 'actioned');
         }
         else {
@@ -229,13 +347,13 @@ class PostHandler {
 
         // let [collection, name] = params.collection.split('#');
         //                 value = collection.find({ query: { name } });
-        // if (perceptor.isnull(found)) {
+        // if (kerds.isnull(found)) {
         //     return found;
         // }
         // else {
-        //     if (perceptor.isset(params.query)) {
-        //         if (perceptor.isset(params.many) && params.many == true) {
-        //             found = perceptor.array.findAll(found.contents, item => {
+        //     if (kerds.isset(params.query)) {
+        //         if (kerds.isset(params.many) && params.many == true) {
+        //             found = kerds.array.findAll(found.contents, item => {
         //                 let flag = true;
         //                 for (let n in params.query) {
         //                     if (item[n] != params.query[n]) flag = false;
@@ -245,7 +363,7 @@ class PostHandler {
         //             });
         //         }
         //         else {
-        //             found = perceptor.array.find(found.contents, item => {
+        //             found = kerds.array.find(found.contents, item => {
         //                 let flag = true;
         //                 for (let n in params.query) {
         //                     if (item[n] != params.query[n]) flag = false;
@@ -256,7 +374,7 @@ class PostHandler {
         //         }
         //     }
 
-        //     if (perceptor.isset(params.projection)) {
+        //     if (kerds.isset(params.projection)) {
         //         if (Array.isArray(found)) {
         //             for (let item of found) {
         //                 for (let p in item) {
@@ -289,10 +407,10 @@ class PostHandler {
     }
 
     organizeData(params) {
-        if (perceptor.isset(params.query)) {
-            if (perceptor.isset(params.changeQuery)) {
+        if (kerds.isset(params.query)) {
+            if (kerds.isset(params.changeQuery)) {
                 for (var i in params.changeQuery) {
-                    if (perceptor.isset(params.query[i])) {
+                    if (kerds.isset(params.query[i])) {
                         if (params.changeQuery[i] == 'objectid') {
                             params.query[i] = new ObjectId(params.query[i]);
                         }
@@ -307,7 +425,7 @@ class PostHandler {
         let preparedData = {};
         let value;
         for (let i in data) {
-            if (!perceptor.isset(preparedData[i])) {
+            if (!kerds.isset(preparedData[i])) {
 
                 if (data[i].filename != '') {
                     value = data[i];
@@ -330,21 +448,23 @@ class PostHandler {
     }
 
     logout(req, res, data) {
-        delete this.sessions[req.sessionId].user;
-        this.sessions[req.sessionId].active = false;
+        delete global.sessions[req.sessionId].user;
+        delete global.sessions[req.sessionId].account;
+        global.sessions[req.sessionId].active = false;
+
         this.respond(req, res, true);
     }
 
     changeDp(req, res, data) {
-        let userPath = `./userdata/${req.sessionId}`;
-        let userImage = `./userdata/${req.sessionId}/dp.png`;
+        let userPath = `./users/${req.sessionId}`;
+        let userImage = `./users/${req.sessionId}/dp.png`;
 
         let uploadImage = () => {
             fs.writeFile(userImage, data.newImage.value, c => {
-                this.set({ collection: 'users', query: { _id: new ObjectId(this.sessions[req.sessionId].user) }, options: { '$set': { userImage: userImage } } }).then(result => {
+                this.set({ collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, options: { '$set': { userImage: userImage } } }).then(result => {
                     this.respond(req, res, result == 1);
 
-                    this.makeHistory(req, result == 1, { action: 'Change Profile Picture', data, collection: 'users', item: this.sessions[req.sessionId].user });
+                    this.makeHistory(req, result == 1, { action: 'Change Profile Picture', data, collection: 'users', item: global.sessions[req.sessionId].user });
 
                 });
             });
@@ -363,19 +483,19 @@ class PostHandler {
     }
 
     deleteDp(req, res, data) {
-        this.set({ collection: 'users', query: { _id: new ObjectId(this.sessions[req.sessionId].user) }, options: { '$set': { userImage: null } } }).then(result => {
-            perceptor.deleteRecursive(`./userdata/${this.sessions[req.sessionId].user}/dp.png`, () => {
+        this.set({ collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, options: { '$set': { userImage: null } } }).then(result => {
+            kerds.deleteRecursive(`./users/${global.sessions[req.sessionId].user}/dp.png`, () => {
                 this.respond(req, res, result == 1);
-                this.makeHistory(req, result == 1, { action: 'Delete Profile Picture', data, collection: 'users', item: this.sessions[req.sessionId].user });
+                this.makeHistory(req, result == 1, { action: 'Delete Profile Picture', data, collection: 'users', item: global.sessions[req.sessionId].user });
             });
         });
     }
 
     editProfile(req, res, data) {
         data.lastModified = new Date().getTime();
-        this.set({ collection: 'users', query: { _id: new ObjectId(this.sessions[req.sessionId].user) }, options: { '$set': data } }).then(result => {
+        this.set({ collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, options: { '$set': data } }).then(result => {
             this.respond(req, res, result == 1);
-            this.makeHistory(req, result == 1, { action: 'Edit Profile', data, collection: 'users', item: this.sessions[req.sessionId].user });
+            this.makeHistory(req, result == 1, { action: 'Edit Profile', data, collection: 'users', item: global.sessions[req.sessionId].user });
         });
     }
 
@@ -390,15 +510,15 @@ class PostHandler {
     }
 
     changePassword(req, res, data) {
-        db.find({ collection: 'users', query: { _id: new ObjectId(this.sessions[req.sessionId].user) }, projection: { currentPassword: 1 } }).then(result => {
-            if (!perceptor.isnull(result)) {
+        db.find({ collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, projection: { currentPassword: 1 } }).then(result => {
+            if (!kerds.isnull(result)) {
                 bcrypt.compare(data.currentPassword, result.currentPassword).then(valid => {
                     if (valid) {
                         bcrypt.hash(data.newPassword, 10).then(hash => {
                             data.newPassword = hash;
-                            this.set({ collection: 'users', query: { _id: new ObjectId(this.sessions[req.sessionId].user) }, options: { '$set': { currentPassword: data.newPassword } } }).then(changed => {
+                            this.set({ collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, options: { '$set': { currentPassword: data.newPassword } } }).then(changed => {
                                 this.respond(req, res, true);
-                                this.makeHistory(req, true, { action: 'Change Password', data, collection: 'users', item: this.sessions[req.sessionId].user });
+                                this.makeHistory(req, true, { action: 'Change Password', data, collection: 'users', item: global.sessions[req.sessionId].user });
                             });
                         });
                     }
@@ -426,13 +546,13 @@ class PostHandler {
             }
         }
 
-        perceptor.runParallel(run, insertCat => {
+        kerds.runParallel(run, insertCat => {
             for (let i in insertCat) {
-                if (!perceptor.isset(insertCat[i].found)) {
+                if (!kerds.isset(insertCat[i].found)) {
                     let id = insertCat[i][0]._id;
                     parents.push(id);
 
-                    this.makeHistory(req, perceptor.isset(insertCat[0]._id), { action: 'Create Category', data, collection: 'categories', item: insertCat[0]._id });
+                    this.makeHistory(req, kerds.isset(insertCat[0]._id), { action: 'Create Category', data, collection: 'categories', item: insertCat[0]._id });
                 }
             }
 
@@ -445,10 +565,10 @@ class PostHandler {
             data.parents = data.parents.join(',');
             this.ifNotExist({ collection: 'categories', query: { name: data.name, parents: data.parents }, check: [{ name: data.name }], action: 'insert', getInserted: true }).then(result => {
 
-                if (perceptor.isset(result.found)) {
+                if (kerds.isset(result.found)) {
                     this.respond(req, res, result);
                 }
-                else if (perceptor.isset(result[0]._id) && data.image != '') {
+                else if (kerds.isset(result[0]._id) && data.image != '') {
                     let categoriesPath = `./categories/${result[0]._id}`;
                     let image = `./categories/${result[0]._id}/image.png`;
 
@@ -473,37 +593,35 @@ class PostHandler {
                     });
                 }
                 else if (data.image == '') {
-                    this.respond(req, res, perceptor.isset(result[0]._id));
-                    this.makeHistory(req, perceptor.isset(result[0]._id), { action: 'Create Category', data, collection: 'categories', item: result[0]._id });
+                    this.respond(req, res, kerds.isset(result[0]._id));
+                    this.makeHistory(req, kerds.isset(result[0]._id), { action: 'Create Category', data, collection: 'categories', item: result[0]._id });
                 }
             });
         });
     }
 
     deleteCategory(req, res, data) {
-        db.delete({ collection: 'categories', query: { _id: new ObjectId(data.id) } }).then(result => {
-            perceptor.deleteRecursive(`./categories/${data.id}`, () => {
-                this.respond(req, res, result.result.ok == 1);
-                this.makeHistory(req, result.result.ok == 1, { action: 'Delete Category', data, collection: 'categories', item: data.id });
-                db.find({ collection: 'categories', query: {}, many: true, projection: { parents: 1 } }).then(categories => {
-                    for (let category of categories) {
-                        if (category.parents.includes(data.id)) {
-                            let newParents = [];
-                            for (let parent of category.parents.split(',')) {
-                                if (parent != data.id) newParents.push(parent);
-                            }
+        this.recycle({ collection: 'categories', query: { _id: new ObjectId(data.id) } }).then(result => {
+            this.respond(req, res, result == 1);
+            this.makeHistory(req, result == 1, { action: 'Delete Category', data, collection: 'categories', item: data.id });
+            // db.find({ collection: 'categories', query: {}, many: true, projection: { parents: 1 } }).then(categories => {
+            //     for (let category of categories) {
+            //         if (category.parents.includes(data.id)) {
+            //             let newParents = [];
+            //             for (let parent of category.parents.split(',')) {
+            //                 if (parent != data.id) newParents.push(parent);
+            //             }
 
-                            db.update({ collection: 'categories', query: { _id: new ObjectId(category._id) }, options: { '$set': { parents: newParents.join(',') } } });
-                        }
-                    }
-                })
-            });
+            //             db.update({ collection: 'categories', query: { _id: new ObjectId(category._id) }, options: { '$set': { parents: newParents.join(',') } } });
+            //         }
+            //     }
+            // })
         });
     }
 
     deleteCategoryImage(req, res, data) {
         this.set({ collection: 'categories', query: { _id: new ObjectId(data.id) }, options: { '$set': { image: null } } }).then(result => {
-            perceptor.deleteRecursive(`./categories/${data.id}/image.png`, () => {
+            kerds.deleteRecursive(`./categories/${data.id}/image.png`, () => {
                 this.respond(req, res, result == 1);
                 this.makeHistory(req, result == 1, { action: 'Delete Category Image', data, collection: 'categories', item: data.id });
             });
@@ -551,12 +669,12 @@ class PostHandler {
             }
         }
 
-        perceptor.runParallel(run, insertCat => {
+        kerds.runParallel(run, insertCat => {
             for (let i in insertCat) {
-                if (!perceptor.isset(insertCat[i].found)) {
+                if (!kerds.isset(insertCat[i].found)) {
                     let id = insertCat[i][0]._id;
                     parents.push(id);
-                    this.makeHistory(req, perceptor.isset(insertCat[0]._id), { action: 'Create Category', data, collection: 'categories', item: insertCat[0]._id });
+                    this.makeHistory(req, kerds.isset(insertCat[0]._id), { action: 'Create Category', data, collection: 'categories', item: insertCat[0]._id });
                 }
             }
 
@@ -577,19 +695,18 @@ class PostHandler {
 
     createTag(req, res, data) {
         this.ifNotExist({ collection: 'tags', query: { name: data.name }, check: [{ name: data.name }], action: 'insert', getInserted: true }).then(result => {
-
-            if (perceptor.isset(result.found)) {
+            if (kerds.isset(result.found)) {
                 this.respond(req, res, result);
             }
-            else if (perceptor.isset(result[0]._id) && data.image != '') {
+            else if (kerds.isset(result[0]._id) && data.image != '') {
                 let tagsPath = `./tags/${result[0]._id}`;
                 let image = `./tags/${result[0]._id}/image.png`;
 
                 let uploadImage = () => {
                     fs.writeFile(image, data.image.value, c => {
-                        db.update({ collection: 'tags', query: { _id: new ObjectId(result[0]._id) }, options: { '$set': { image } } }).then(result => {
-                            this.respond(req, res, result == 1);
-                            this.makeHistory(req, result == 1, { action: 'Create Tag', data, collection: 'tags', item: result[0]._id });
+                        db.update({ collection: 'tags', query: { _id: new ObjectId(result[0]._id) }, options: { '$set': { image } } }).then(updated => {
+                            this.respond(req, res, updated == 1);
+                            this.makeHistory(req, updated == 1, { action: 'Create Tag', data, collection: 'tags', item: result[0]._id });
                         });
                     });
                 }
@@ -606,14 +723,14 @@ class PostHandler {
                 });
             }
             else if (data.image == '') {
-                this.respond(req, res, perceptor.isset(result[0]._id));
+                this.respond(req, res, kerds.isset(result[0]._id));
             }
         });
     }
 
     deleteTagImage(req, res, data) {
         db.update({ collection: 'tags', query: { _id: new ObjectId(data.id) }, options: { '$set': { image: null } } }).then(result => {
-            perceptor.deleteRecursive(`./tags/${data.id}/image.png`, () => {
+            kerds.deleteRecursive(`./tags/${data.id}/image.png`, () => {
                 this.respond(req, res, result == 1);
                 this.makeHistory(req, result == 1, { action: 'Delete Tag Image', data, collection: 'tags', item: data.id });
             });
@@ -646,11 +763,9 @@ class PostHandler {
     }
 
     deleteTag(req, res, data) {
-        db.delete({ collection: 'tags', query: { _id: new ObjectId(data.id) } }).then(result => {
-            perceptor.deleteRecursive(`./tags/${data.id}`, () => {
-                this.respond(req, res, result.result.ok == 1);
-                this.makeHistory(req, result.result.ok == 1, { action: 'Delete Tag', data, collection: 'tags', item: data.id });
-            });
+        this.recycle({ collection: 'tags', query: { _id: new ObjectId(data.id) } }).then(result => {
+            this.respond(req, res, result == 1);
+            this.makeHistory(req, result == 1, { action: 'Delete Tag', data, collection: 'tags', item: data.id });
         });
     }
 
@@ -690,13 +805,13 @@ class PostHandler {
             }
         }
 
-        perceptor.runParallel(runCats, resultCats => {
+        kerds.runParallel(runCats, resultCats => {
             for (let i in resultCats) {
-                if (!perceptor.isset(resultCats[i].found)) {
+                if (!kerds.isset(resultCats[i].found)) {
                     let id = resultCats[i][0]._id;
                     categories.push(id);
 
-                    this.makeHistory(req, perceptor.isset(resultCats[0]._id), { action: 'Create Category', data, collection: 'categories', item: resultCats[0]._id });
+                    this.makeHistory(req, kerds.isset(id), { action: 'Create Category', data, collection: 'categories', item: id });
                 }
             }
 
@@ -708,13 +823,13 @@ class PostHandler {
 
             data.categories = data.categories.join(',');
 
-            perceptor.runParallel(runTags, resultTags => {
+            kerds.runParallel(runTags, resultTags => {
                 for (let i in resultTags) {
-                    if (!perceptor.isset(resultTags[i].found)) {
+                    if (!kerds.isset(resultTags[i].found)) {
                         let id = resultTags[i][0]._id;
                         tags.push(id);
 
-                        this.makeHistory(req, perceptor.isset(resultTags[0]._id), { action: 'Create Tag', data, collection: 'tags', item: resultTags[0]._id });
+                        this.makeHistory(req, kerds.isset(id), { action: 'Create Tag', data, collection: 'tags', item: id });
                     }
                 }
 
@@ -733,10 +848,10 @@ class PostHandler {
 
                 this.ifNotExist({ collection: 'items', query: data, check: [{ name: data.name }, { code: data.code }], action: 'insert', getInserted: true }).then(result => {
 
-                    if (perceptor.isset(result.found)) {
+                    if (kerds.isset(result.found)) {
                         this.respond(req, res, result);
                     }
-                    else if (perceptor.isset(result[0]._id) && image != '') {
+                    else if (kerds.isset(result[0]._id) && image != '') {
                         let itemPath = `./items/${result[0]._id}`;
                         let imagePath = `./items/${result[0]._id}/image.png`;
 
@@ -761,7 +876,7 @@ class PostHandler {
                         });
                     }
                     else {
-                        this.respond(req, res, perceptor.isset(result[0]._id));
+                        this.respond(req, res, kerds.isset(result[0]._id));
                     }
                 });
             });
@@ -769,17 +884,15 @@ class PostHandler {
     }
 
     deleteItem(req, res, data) {
-        db.delete({ collection: 'items', query: { _id: new ObjectId(data.id) } }).then(result => {
-            perceptor.deleteRecursive(`./items/${data.id}`, () => {
-                this.respond(req, res, result.result.ok == 1);
-                this.makeHistory(req, result.result.ok == 1, { action: 'Delete Item', data, collection: 'items', item: data.id });
-            });
+        this.recycle({ collection: 'items', query: { _id: new ObjectId(data.id) } }).then(result => {
+            this.respond(req, res, result == 1);
+            this.makeHistory(req, result == 1, { action: 'Delete Item', data, collection: 'items', item: data.id });
         });
     }
 
     deleteItemImage(req, res, data) {
         db.update({ collection: 'items', query: { _id: new ObjectId(data.id) }, options: { '$set': { image: null } } }).then(result => {
-            perceptor.deleteRecursive(`./items/${data.id}/image.png`, () => {
+            kerds.deleteRecursive(`./items/${data.id}/image.png`, () => {
                 this.respond(req, res, result == 1);
                 this.makeHistory(req, result == 1, { action: 'Delete Item Image', data, collection: 'items', item: data.id });
             });
@@ -837,13 +950,13 @@ class PostHandler {
             }
         }
 
-        perceptor.runParallel(runCats, resultCats => {
+        kerds.runParallel(runCats, resultCats => {
             for (let i in resultCats) {
-                if (!perceptor.isset(resultCats[i].found)) {
+                if (!kerds.isset(resultCats[i].found)) {
                     let id = resultCats[i][0]._id;
                     categories.push(id);
 
-                    this.makeHistory(req, perceptor.isset(resultCats[0]._id), { action: 'Create Category', data, collection: 'categories', item: resultCats[0]._id });
+                    this.makeHistory(req, kerds.isset(resultCats[0]._id), { action: 'Create Category', data, collection: 'categories', item: resultCats[0]._id });
                 }
             }
 
@@ -855,13 +968,13 @@ class PostHandler {
 
             data.categories = data.categories.join(',');
 
-            perceptor.runParallel(runTags, resultTags => {
+            kerds.runParallel(runTags, resultTags => {
                 for (let i in resultTags) {
-                    if (!perceptor.isset(resultTags[i].found)) {
+                    if (!kerds.isset(resultTags[i].found)) {
                         let id = resultTags[i][0]._id;
                         tags.push(id);
 
-                        this.makeHistory(req, perceptor.isset(resultTags[0]._id), { action: 'Create Tag', data, collection: 'categories', item: resultTags[0]._id });
+                        this.makeHistory(req, kerds.isset(resultTags[0]._id), { action: 'Create Tag', data, collection: 'categories', item: resultTags[0]._id });
                     }
                 }
 
@@ -893,12 +1006,12 @@ class PostHandler {
         data.tasks = JSON.parse(data.tasks);
 
         this.ifNotExist({ collection: 'customforms', query: data, check: [{ name: data.name }], action: 'insert', getInserted: true }).then(result => {
-            if (perceptor.isset(result.found)) {
+            if (kerds.isset(result.found)) {
                 this.respond(req, res, result);
             }
             else {
-                this.respond(req, res, perceptor.isset(result[0]._id));
-                this.makeHistory(req, perceptor.isset(result[0]._id), { action: 'Create Custom Form', data, collection: 'customforms', item: result[0]._id });
+                this.respond(req, res, kerds.isset(result[0]._id));
+                this.makeHistory(req, kerds.isset(result[0]._id), { action: 'Create Custom Form', data, collection: 'customforms', item: result[0]._id });
             }
         });
     }
@@ -916,25 +1029,25 @@ class PostHandler {
     }
 
     deleteCustomForm(req, res, data) {
-        db.delete({ collection: 'customforms', query: { _id: new ObjectId(data.id) } }).then(result => {
-            this.respond(req, res, result.result.ok == 1);
-            this.makeHistory(req, result.result.ok == 1, { action: 'Delete Custom Form', data, collection: 'customforms', item: data.id });
+        this.recycle({ collection: 'customforms', query: { _id: new ObjectId(data.id) } }).then(result => {
+            this.respond(req, res, result == 1);
+            this.makeHistory(req, result == 1, { action: 'Delete Custom Form', data, collection: 'customforms', item: data.id });
         });
     }
 
     createList(req, res, data) {
-        data.author = this.sessions[req.sessionId].user;
+        data.author = global.sessions[req.sessionId].user;
         data.time = new Date().getTime();
         data.contents = JSON.parse(data.contents);
 
         this.ifNotExist({ collection: 'lists', query: data, check: [{ name: data.name }], action: 'insert', getInserted: true }).then(result => {
 
-            if (perceptor.isset(result.found)) {
+            if (kerds.isset(result.found)) {
                 this.respond(req, res, result);
             }
             else {
-                this.respond(req, res, perceptor.isset(result[0]._id));
-                this.makeHistory(req, perceptor.isset(result[0]._id), { action: 'Create List', data, collection: 'lists', item: result[0]._id });
+                this.respond(req, res, kerds.isset(result[0]._id));
+                this.makeHistory(req, kerds.isset(result[0]._id), { action: 'Create List', data, collection: 'lists', item: result[0]._id });
             }
         });
     }
@@ -952,10 +1065,10 @@ class PostHandler {
         db.find({ collection: 'lists', query: { _id: new ObjectId(data.id) }, }).then(list => {
             let contents = list.contents;
 
-            let ids = perceptor.object.valueOfObjectArray(contents, '_id');
-            let id = perceptor.generateRandom(24);
+            let ids = kerds.object.valueOfObjectArray(contents, '_id');
+            let id = kerds.generateRandom(24);
             while (ids.includes(id)) {
-                id = perceptor.generateRandom(24);
+                id = kerds.generateRandom(24);
             }
 
             content._id = id;
@@ -988,9 +1101,9 @@ class PostHandler {
     }
 
     deleteList(req, res, data) {
-        db.delete({ collection: 'lists', query: { _id: new ObjectId(data.id) } }).then(result => {
-            this.respond(req, res, result.result.ok == 1);
-            this.makeHistory(req, result.result.ok == 1, { action: 'Delete List', data, collection: 'lists', item: data.id });
+        this.recycle({ collection: 'lists', query: { _id: new ObjectId(data.id) } }).then(result => {
+            this.respond(req, res, result == 1);
+            this.makeHistory(req, result == 1, { action: 'Delete List', data, collection: 'lists', item: data.id });
         });
     }
 
@@ -1016,7 +1129,7 @@ class PostHandler {
                 run[result[i].name] = db.find({ collection: result[i].name, query: {}, many: true });//get each collection's content
             }
 
-            perceptor.runParallel(run, found => {
+            kerds.runParallel(run, found => {
                 for (let collection in found) {
                     collections[collection] = [];
 
@@ -1040,8 +1153,8 @@ class PostHandler {
 
         db.find({ collection, query: {}, many: true }).then(result => {
             for (let i = 0; i < result.length; i++) {
-                if (perceptor.isset(item)) {
-                    let list = perceptor.array.find(result, single => {
+                if (kerds.isset(item)) {
+                    let list = kerds.array.find(result, single => {
                         return single.name == item;
                     });
 
@@ -1079,8 +1192,8 @@ class PostHandler {
                 run[result[i].name] = db.find({ collection: result[i].name, query: {}, many: true });//get each collection's content
             }
 
-            perceptor.runParallel(run, found => {
-                if (perceptor.isset(found.users)) {
+            kerds.runParallel(run, found => {
+                if (kerds.isset(found.users)) {
                     for (let user of found.users) {
                         delete user.currentPassword;
                     }
@@ -1093,7 +1206,7 @@ class PostHandler {
 
     performTasks(tasks, type, callback) {
         db.find({ collection: 'customforms', query: { _id: new ObjectId(type) }, projection: { tasks: 1, target: 1, _id: 0 } }).then(customTasks => {//get all the custom tasks
-            let target = perceptor.inBetween(customTasks.target, '$#&{', '}&#$');//get the forms target
+            let target = kerds.inBetween(customTasks.target, '$#&{', '}&#$');//get the forms target
             try {
                 target = JSON.parse(target).collection;
             } catch (error) {
@@ -1104,7 +1217,7 @@ class PostHandler {
             let customT;
 
             for (let name in tasks) {
-                customT = perceptor.array.find(customTasks.tasks, t => {//get the tasks sample
+                customT = kerds.array.find(customTasks.tasks, t => {//get the tasks sample
                     return t.name == name;
                 });
 
@@ -1115,11 +1228,11 @@ class PostHandler {
                 }
             }
 
-            perceptor.runParallel(run, result => {
+            kerds.runParallel(run, result => {
                 for (let name in result) {
                     let [taskName, position] = name.split('.');
 
-                    customT = perceptor.array.find(customTasks.tasks, t => {
+                    customT = kerds.array.find(customTasks.tasks, t => {
                         return t.name == taskName;
                     });
 
@@ -1132,7 +1245,7 @@ class PostHandler {
 
     revertTasks(tasks, type, callback) {
         db.find({ collection: 'customforms', query: { _id: new ObjectId(type) }, projection: { tasks: 1, target: 1, _id: 0 } }).then(customTasks => {
-            let target = perceptor.inBetween(customTasks.target, '$#&{', '}&#$');
+            let target = kerds.inBetween(customTasks.target, '$#&{', '}&#$');
             try {
                 target = JSON.parse(target).collection;
             } catch (error) {
@@ -1142,7 +1255,7 @@ class PostHandler {
             let run = {};
             let customT;
             for (let name in tasks) {
-                customT = perceptor.array.find(customTasks.tasks, t => {
+                customT = kerds.array.find(customTasks.tasks, t => {
                     return t.name == name;
                 });
 
@@ -1153,11 +1266,11 @@ class PostHandler {
                 }
             }
 
-            perceptor.runParallel(run, result => {
+            kerds.runParallel(run, result => {
                 for (let name in result) {
                     let [taskName, position] = name.split('.');
 
-                    customT = perceptor.array.find(customTasks.tasks, t => {
+                    customT = kerds.array.find(customTasks.tasks, t => {
                         return t.name == taskName;
                     });
 
@@ -1169,7 +1282,7 @@ class PostHandler {
     }
 
     createForm(req, res, data) {
-        data.author = this.sessions[req.sessionId].user;
+        data.author = global.sessions[req.sessionId].user;
         data.time = new Date().getTime();
         data.contents = JSON.parse(data.contents);
         data.tasks = JSON.parse(data.tasks);
@@ -1225,8 +1338,8 @@ class PostHandler {
 
     saveView(req, res, data) {
         data.view = JSON.parse(data.view);
-        data.owner = this.sessions[req.sessionId].user;
-        db.save({ collection: 'views', query: data, check: { owner: this.sessions[req.sessionId].user } }).then(result => {
+        data.owner = global.sessions[req.sessionId].user;
+        db.save({ collection: 'views', query: data, check: { owner: global.sessions[req.sessionId].user } }).then(result => {
             this.respond(req, res, result);
             this.makeHistory(req, result == 1, { action: 'Save View', data, collection: 'views', item: data.owner });
         });
@@ -1236,12 +1349,12 @@ class PostHandler {
         data.contents = JSON.parse(data.contents);
 
         this.ifNotExist({ collection: 'reportgenerators', query: data, check: [{ name: data.name }], action: 'insert', getInserted: true }).then(result => {
-            if (perceptor.isset(result.found)) {
+            if (kerds.isset(result.found)) {
                 this.respond(req, res, result);
             }
             else {
-                this.respond(req, res, perceptor.isset(result[0]._id));
-                this.makeHistory(req, perceptor.isset(result[0]._id), { action: 'Create Report Generator', data, collection: 'reportgenerators', item: result[0]._id });
+                this.respond(req, res, kerds.isset(result[0]._id));
+                this.makeHistory(req, kerds.isset(result[0]._id), { action: 'Create Report Generator', data, collection: 'reportgenerators', item: result[0]._id });
             }
         });
     }
@@ -1258,18 +1371,18 @@ class PostHandler {
     }
 
     deleteReportGenerator(req, res, data) {
-        db.delete({ collection: 'reportgenerators', query: { _id: new ObjectId(data.id) } }).then(result => {
-            this.respond(req, res, result.result.ok == 1);
-            this.makeHistory(req, result.result.ok == 1, { action: 'Delete Report Generator', data, collection: 'reportgenerators', item: data.id });
+        this.recycle({ collection: 'reportgenerators', query: { _id: new ObjectId(data.id) } }).then(result => {
+            this.respond(req, res, result == 1);
+            this.makeHistory(req, result == 1, { action: 'Delete Report Generator', data, collection: 'reportgenerators', item: data.id });
         });
     }
 
     createReport(req, res, data) {
         data.content = JSON.parse(data.content);
-        data.author = this.sessions[req.sessionId].user;
+        data.author = global.sessions[req.sessionId].user;
         this.insert({ collection: 'reports', query: data, getInserted: true }).then(result => {
-            this.respond(req, res, perceptor.isset(result[0]._id));
-            this.makeHistory(req, perceptor.isset(result[0]._id), { action: 'Create Report', data, collection: 'reports', item: result[0]._id });
+            this.respond(req, res, kerds.isset(result[0]._id));
+            this.makeHistory(req, kerds.isset(result[0]._id), { action: 'Create Report', data, collection: 'reports', item: result[0]._id });
         });
     }
 
@@ -1283,9 +1396,105 @@ class PostHandler {
     }
 
     deleteReport(req, res, data) {
-        db.delete({ collection: 'reports', query: { _id: new ObjectId(data.id) } }).then(result => {
-            this.respond(req, res, result.result.ok == 1);
-            this.makeHistory(req, result.result.ok == 1, { action: 'Delete Report', data, collection: 'reports', item: data.id });
+        this.recycle({ collection: 'reports', query: { _id: new ObjectId(data.id) } }).then(result => {
+            this.respond(req, res, result == 1);
+            this.makeHistory(req, result == 1, { action: 'Delete Report', data, collection: 'reports', item: data.id });
+        });
+    }
+
+    search(req, res, data) {
+        let found = { items: [], users: [], categories: [], tags: [], lists: [] };
+        let query = data.query.toLowerCase();
+
+        kerds.runParallel({
+            items: db.find({ collection: 'items', query: {}, many: true }),
+            categories: db.find({ collection: 'categories', query: {}, many: true }),
+            tags: db.find({ collection: 'tags', query: {}, many: true }),
+            users: db.find({ collection: 'users', query: {}, many: true }),
+            lists: db.find({ collection: 'lists', query: {}, many: true }),
+        }, result => {
+            return new Promise((resolve, reject) => {
+                for (let collection in result) {
+                    for (let item of result[collection]) {
+                        if (JSON.stringify(item).toLowerCase().includes(query)) {
+                            if (collection == 'users') {
+                                found[collection].push({ _id: item._id, name: item.userName, image: item.userImage });
+                            }
+                            else if (collection == 'items') {
+                                found[collection].push({ _id: item._id, name: item.name, image: item.image });
+                            }
+                            else if (collection == 'categories') {
+                                found[collection].push({ _id: item._id, name: item.name, image: item.image });
+                            }
+                            else if (collection == 'tags') {
+                                found[collection].push({ _id: item._id, name: item.name, image: item.image });
+                            }
+                            else if (collection == 'list') {
+                                found[collection].push({ _id: item._id, name: item.name });
+                            }
+                        }
+                    }
+                }
+                this.respond(req, res, found);
+                resolve(found);
+            });
+        });
+    }
+
+    notify(params) {
+        params.time = new Date().getTime();
+        params.read = {};
+        params.sent = {};
+
+        db.insert({ collection: 'notifications', query: params });
+    }
+
+    getNotifications(req, res, data) {
+        let notifications = [];
+        let user = data.id || global.sessions[req.sessionId].user;
+        db.find({ collection: 'notifications', query: {}, many: true }).then(found => {
+            for (let i = 0; i < found.length; i++) {
+                if (found[i].users.includes(user)) {
+                    found[i].status = kerds.isset(found[i].read[user]) ? 'Read' : 'UnRead';
+                    found[i].delivered = kerds.isset(found[i].sent[user]);
+                    delete found[i].read;
+                    delete found[i].sent;
+                    if (data.flag == 'unsent') {
+                        if (!found[i].delivered) {
+                            notifications.push(found[i]);
+                        }
+                    }
+                    else if (data.flag == 'unread') {
+                        if (found[i].status == 'UnRead') {
+                            notifications.push(found[i]);
+                        }
+                    }
+                    else {
+                        notifications.push(found[i]);
+                    }
+                }
+            }
+            this.respond(req, res, notifications);
+        });
+    }
+
+    sentNotification(req, res, data) {
+        data.id = new ObjectId(data.id);
+        db.find({ collection: 'notifications', query: { _id: data.id }, projection: { sent: 1, _id: 0 } }).then(note => {
+            note.sent[global.sessions[req.sessionId].user] = new Date().getTime();
+            this.set({ collection: 'notifications', query: { _id: data.id }, options: { '$set': { sent: note.sent } } }).then(read => {
+                this.respond(req, res, read == 1);
+            });
+        });
+    }
+
+    readNotification(req, res, data) {
+        data.id = new ObjectId(data.id);
+        db.find({ collection: 'notifications', query: { _id: data.id }, projection: { read: 1, _id: 0 } }).then(note => {
+            note.read[global.sessions[req.sessionId].user] = new Date().getTime();
+            this.set({ collection: 'notifications', query: { _id: data.id }, options: { '$set': { read: note.read } } }).then(read => {
+                this.respond(req, res, read == 1);
+            });
         });
     }
 }

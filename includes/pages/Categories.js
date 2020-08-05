@@ -1,12 +1,12 @@
 let categories = (mainBody) => {
     let settingsMainWindow = mainBody.find('#settings-main-window');
-    let loading = perceptor.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
-    let urlVars = perceptor.urlSplitter(location.href);
+    let loading = kerdx.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
+    let urlVars = kerdx.urlSplitter(location.href);
 
     let show = () => {
         let id = urlVars.vars.id;
         system.get({ collection: 'categories', query: {}, many: true }).then(categories => {
-            let category = perceptor.array.getObject(categories, '_id', id);
+            let category = kerdx.array.getObject(categories, '_id', id);
 
             settingsMainWindow.makeElement([
                 {
@@ -54,8 +54,8 @@ let categories = (mainBody) => {
                 let categoryParents = [];
 
                 for (let parent of parents) {
-                    let p = perceptor.array.getObject(categories, '_id', parent.trim());
-                    if (perceptor.isset(p)) {
+                    let p = kerdx.array.getObject(categories, '_id', parent.trim());
+                    if (kerdx.isset(p)) {
                         categoryParents.push(p);
                     }
                 }
@@ -95,7 +95,7 @@ let categories = (mainBody) => {
             });
 
             settingsMainWindow.find('#edit-category-image').addEventListener('click', event => {
-                let uploadImageForm = perceptor.createElement({
+                let uploadImageForm = kerdx.createElement({
                     element: 'form', attributes: { class: 'single-upload-form' }, children: [
                         {
                             element: 'span', attributes: { class: 'single-upload-form-controls' }, children: [
@@ -109,7 +109,7 @@ let categories = (mainBody) => {
                     ]
                 });
 
-                let popUp = perceptor.popUp(uploadImageForm);
+                let popUp = kerdx.popUp(uploadImageForm);
 
                 uploadImageForm.find('#new-image').onChanged(value => {
                     uploadImageForm.find('#preview-image').src = value.src;
@@ -117,7 +117,7 @@ let categories = (mainBody) => {
 
                 uploadImageForm.find('#upload').addEventListener('click', event => {
                     event.preventDefault();
-                    let data = perceptor.jsonForm(uploadImageForm);
+                    let data = kerdx.jsonForm(uploadImageForm);
                     data.action = 'changeCategoryImage';
                     data.id = id;
 
@@ -174,10 +174,10 @@ let categories = (mainBody) => {
 
     let clone = (id) => {
         system.get({ collection: 'categories', query: {}, projection: { image: 0 }, many: true }).then(categories => {
-            let category = perceptor.array.getObject(categories, '_id', id);
-            let categoryNames = perceptor.object.objectOfObjectArray(categories, '_id', 'name');
+            let category = kerdx.array.getObject(categories, '_id', id);
+            let categoryNames = kerdx.object.objectOfObjectArray(categories, '_id', 'name');
 
-            let cloneForm = perceptor.createForm({
+            let cloneForm = kerdx.createForm({
                 title: 'Clone Category', attributes: { enctype: 'multipart/form-data', id: 'clone-category-form', class: 'form' },
                 contents: {
                     name: { element: 'input', attributes: { id: 'name', name: 'name', value: category.name } },
@@ -194,7 +194,7 @@ let categories = (mainBody) => {
     }
 
     let create = (categoryNames) => {
-        let createForm = perceptor.createForm({
+        let createForm = kerdx.createForm({
             title: 'Create Category', attributes: { enctype: 'multipart/form-data', id: 'create-category-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name' } },
@@ -210,14 +210,14 @@ let categories = (mainBody) => {
     }
 
     let edit = (category, categories, children) => {
-        let categoryNames = perceptor.object.objectOfObjectArray(categories, '_id', 'name');
+        let categoryNames = kerdx.object.objectOfObjectArray(categories, '_id', 'name');
         delete categoryNames[category._id];
 
         for (let child of children) {
             delete categoryNames[child._id];
         }
 
-        let editForm = perceptor.createForm({
+        let editForm = kerdx.createForm({
             title: 'Edit Category', attributes: { enctype: 'multipart/form-data', id: 'edit-category-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name', value: category.name } },
@@ -228,18 +228,18 @@ let categories = (mainBody) => {
             }
         });
 
-        let popUp = perceptor.popUp(editForm);
+        let popUp = kerdx.popUp(editForm);
 
         editForm.addEventListener('submit', event => {
             event.preventDefault();
-            let data = perceptor.jsonForm(editForm);
+            let data = kerdx.jsonForm(editForm);
             data.action = 'editCategory';
             let parents = editForm.find('#parents').value;
             data.id = category._id;
             data.newCats = [];
             data.parents = [];
 
-            let formValidation = perceptor.validateForm(editForm);
+            let formValidation = kerdx.validateForm(editForm);
 
             if (!formValidation.flag) {
                 loading.replaceWith(editForm.getState({ name: 'submit' }));
@@ -283,18 +283,18 @@ let categories = (mainBody) => {
     }
 
     let make = (form, list) => {
-        let popUp = perceptor.popUp(form);
+        let popUp = kerdx.popUp(form);
         popUp.find('#toggle-window').click();
 
         form.addEventListener('submit', event => {
             event.preventDefault();
-            let data = perceptor.jsonForm(form);
+            let data = kerdx.jsonForm(form);
             data.action = 'createCategory';
             let parents = form.find('#parents').value;
             data.newCats = [];
             data.parents = [];
 
-            let formValidation = perceptor.validateForm(form);
+            let formValidation = kerdx.validateForm(form);
 
             if (!formValidation.flag) {
                 loading.replaceWith(form.getState({ name: 'submit' }));
@@ -330,7 +330,7 @@ let categories = (mainBody) => {
 
     }
 
-    if (!perceptor.isset(urlVars.vars.action) || urlVars.vars.action == 'view') {
+    if (!kerdx.isset(urlVars.vars.action) || urlVars.vars.action == 'view') {
         settingsMainWindow.makeElement([
             {
                 element: 'div', attributes: { class: 'settings-sub-menu' }, children: [
@@ -343,28 +343,34 @@ let categories = (mainBody) => {
         ]);
         let mainContentWindow = settingsMainWindow.find('.settings-content-window');
 
-        system.get({ collection: 'categories', query: {}, projection: { name: 1 }, many: true }).then(categories => {
-            let categoryNames = perceptor.object.objectOfObjectArray(categories, '_id', 'name');
+        system.get({ collection: 'categories', query: {}, projection: { name: 1, recycled: 1 }, many: true }).then(categories => {
+            let categoryNames = kerdx.object.objectOfObjectArray(categories, '_id', 'name');
+            let recycled = kerdx.array.findAll(categories, cat=>{
+                return cat.recycled == true;
+            });
+            categories = kerdx.array.findAll(categories, cat=>{
+                return cat.recycled == undefined || cat.recycled == false;
+            });
 
-            let categoriesTable = perceptor.createTable({
+            let categoriesTable = kerdx.createTable({
                 title: 'All Categories', contents: categories, search: true, sort: true
             });
 
             mainContentWindow.render(categoriesTable);
-            perceptor.listenTable({ options: ['view', 'clone', 'delete'], table: categoriesTable }, {
+            kerdx.listenTable({ options: ['view', 'clone', 'delete'], table: categoriesTable }, {
                 click: event => {
                     let target = event.target;
-                    let { row } = target.getParents('.perceptor-table-column-cell').dataset;
-                    let table = target.getParents('.perceptor-table');
-                    let id = table.find(`.perceptor-table-column[data-name="_id"]`).find(`.perceptor-table-column-cell[data-row="${row}"]`).dataset.value;
+                    let { row } = target.getParents('.kerdx-table-column-cell').dataset;
+                    let table = target.getParents('.kerdx-table');
+                    let id = table.find(`.kerdx-table-column[data-name="_id"]`).find(`.kerdx-table-column-cell[data-row="${row}"]`).dataset.value;
 
-                    if (target.id == 'perceptor-table-option-view') {
+                    if (target.id == 'kerdx-table-option-view') {
                         system.redirect('settings.html?page=categories&action=show&id=' + id);
                     }
-                    else if (target.id == 'perceptor-table-option-clone') {
+                    else if (target.id == 'kerdx-table-option-clone') {
                         clone(id);
                     }
-                    else if (target.id == 'perceptor-table-option-delete') {
+                    else if (target.id == 'kerdx-table-option-delete') {
                         system.redirect('settings.html?page=categories&action=delete&id=' + id);
                     }
                 }

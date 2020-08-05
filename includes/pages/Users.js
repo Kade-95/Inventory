@@ -20,12 +20,12 @@ class Users {
             }
         ]);
 
-        let url = perceptor.urlSplitter(location.href);
+        let url = kerdx.urlSplitter(location.href);
         let page = url.vars.page;
         if (!Object.values(url.vars).length) {
             this.view(mainBody.find('#users-main-window'));
         }
-        else if (perceptor.isset(this[page])) {
+        else if (kerdx.isset(this[page])) {
             this[page](mainBody.find('#users-main-window'));
         }
         else {
@@ -34,7 +34,7 @@ class Users {
     }
 
     create(container) {
-        let createForm = perceptor.createForm({
+        let createForm = kerdx.createForm({
             title: 'Create User', attributes: { enctype: 'multipart/form-data', id: 'create-user-form', class: 'form', style: { border: '1px solid var(--secondary-color)' } },
             contents: {
                 userName: { element: 'input', attributes: { id: 'user-name', name: 'userName' } },
@@ -55,14 +55,14 @@ class Users {
     }
 
     makeUser(form) {
-        let loading = perceptor.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
+        let loading = kerdx.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
 
         form.getState({ name: 'submit' }).addEventListener('click', event => {
             event.preventDefault();
             form.getState({ name: 'submit' }).replaceWith(loading);
             form.setState({ name: 'error', attributes: { style: { display: 'none' } }, text: '' });
 
-            let formValidation = perceptor.validateForm(form);
+            let formValidation = kerdx.validateForm(form);
 
             if (!formValidation.flag) {
                 loading.replaceWith(form.getState({ name: 'submit' }));
@@ -71,14 +71,14 @@ class Users {
             }
 
             loading.replaceWith(form.getState({ name: 'submit' }));
-            let data = perceptor.jsonForm(form);
+            let data = kerdx.jsonForm(form);
             data.action = 'createUser';
             system.connect({ data }).then(result => {
                 if (result == true) {
                     window.history.go(-1);
                 }
-                else if (perceptor.isset(result.found)) {
-                    form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `${perceptor.camelCasedToText(result.found).toUpperCase()} is already in use` });
+                else if (kerdx.isset(result.found)) {
+                    form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `${kerdx.camelCasedToText(result.found).toUpperCase()} is already in use` });
                 }
                 else {
                     form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `Error Unknown` });
@@ -90,11 +90,14 @@ class Users {
     view(container) {
         let moreControls = document.body.find('#more-user-controls');
 
-        system.get({ collection: 'users', query: {}, projection: { userType: 1, userName: 1, email: '1' }, many: true }).then(result => {
+        system.get({ collection: 'users', query: {}, projection: { userType: 1, userName: 1, email: '1', recycled: 1 }, many: true }).then(result => {
+            result = kerdx.array.findAll(result, item => {
+                return item.recycled == undefined || item.recycled == false;
+            });
             for (let i in result) {
                 result[i].status = 'Offline';
             }
-            let usersTable = perceptor.createTable({ title: 'Users Table', contents: result, search: true, sort: true, filter: ['All', 'Online', 'Offline', 'Admin', 'Staff'], projection: {email: -1}});
+            let usersTable = kerdx.createTable({ title: 'Users Table', contents: result, search: true, sort: true, filter: ['All', 'Online', 'Offline', 'Admin', 'Staff'], projection: { email: -1 } });
             container.render(usersTable);
 
             let usersStatus = {};
@@ -104,26 +107,26 @@ class Users {
                 usersStatus[users[i].find('td[data-name=table-data-_id]').textContent] = system.connect({ data: { action: 'isUserActive', user: users[i].find('td[data-name=table-data-_id]').textContent } });
             }
 
-            perceptor.runParallel(usersStatus, statusResult => {
+            kerdx.runParallel(usersStatus, statusResult => {
                 for (let i = 0; i < users.length; i++) {
                     users[i].find('td[data-name=table-data-status]').textContent = statusResult[users[i].find('td[data-name=table-data-_id]').textContent] ? 'Online' : 'Offline';
                 }
             });
 
-            perceptor.listenTable({ options: ['view', 'clone', 'delete'], table: usersTable }, {
+            kerdx.listenTable({ options: ['view', 'clone', 'delete'], table: usersTable }, {
                 click: event => {
                     let target = event.target;
-                    let { row } = target.getParents('.perceptor-table-column-cell').dataset;
-                    let table = target.getParents('.perceptor-table');
-                    let id = table.find(`.perceptor-table-column[data-name="_id"]`).find(`.perceptor-table-column-cell[data-row="${row}"]`).dataset.value;
+                    let { row } = target.getParents('.kerdx-table-column-cell').dataset;
+                    let table = target.getParents('.kerdx-table');
+                    let id = table.find(`.kerdx-table-column[data-name="_id"]`).find(`.kerdx-table-column-cell[data-row="${row}"]`).dataset.value;
 
-                    if (target.id == 'perceptor-table-option-view') {
+                    if (target.id == 'kerdx-table-option-view') {
                         system.redirect('users.html?page=showUser&id=' + id);
                     }
-                    else if (target.id == 'perceptor-table-option-clone') {
+                    else if (target.id == 'kerdx-table-option-clone') {
                         system.redirect('users.html?page=cloneUser&id=' + id);
                     }
-                    else if (target.id == 'perceptor-table-option-delete') {
+                    else if (target.id == 'kerdx-table-option-delete') {
                         system.redirect('users.html?page=deleteUser&id=' + id);
                     }
                 },
@@ -131,22 +134,22 @@ class Users {
                     let hide = false;
 
                     if (sortValue == 'Online') {
-                        hide = perceptor.array.find(row, value => {
+                        hide = kerdx.array.find(row, value => {
                             return value.dataset.name == 'status';
                         }).textContent != 'Online';
                     }
                     else if (sortValue == 'Offline') {
-                        hide = perceptor.array.find(row, value => {
+                        hide = kerdx.array.find(row, value => {
                             return value.dataset.name == 'status';
                         }).textContent != 'Offline';
                     }
                     else if (sortValue == 'Admin') {
-                        hide = perceptor.array.find(row, value => {
+                        hide = kerdx.array.find(row, value => {
                             return value.dataset.name == 'userType';
                         }).textContent != 'Admin';
                     }
                     else if (sortValue == 'Staff') {
-                        hide = perceptor.array.find(row, value => {
+                        hide = kerdx.array.find(row, value => {
                             return value.dataset.name == 'userType';
                         }).textContent != 'Staff';
                     }
@@ -157,7 +160,7 @@ class Users {
             let deleteUsers = moreControls.makeElement({ element: 'a', attributes: { class: 'btn btn-small' }, text: 'Delete Users' });
 
             deleteUsers.addEventListener('click', event => {
-                let selected = usersTable.findAll('.perceptor-table-selected-row td[data-name=table-data-_id]');
+                let selected = usersTable.findAll('.kerdx-table-selected-row td[data-name=table-data-_id]');
                 let users = [];
                 for (let i = 0; i < selected.length; i++) {
                     users.push(selected[i].textContent);
@@ -169,17 +172,17 @@ class Users {
     }
 
     showUser(container) {
-        let user = perceptor.urlSplitter(location.href).vars.id;
+        let user = kerdx.urlSplitter(location.href).vars.id;
         let moreControls = document.body.find('#more-user-controls');
         system.get({ collection: 'users', query: { _id: user }, changeQuery: { _id: 'objectid' } }).then(result => {
             let birthday = result.birthday;
             let userImage = result.userImage;
-            if(userImage == undefined || userImage == 'null'){
+            if (userImage == undefined || userImage == 'null') {
                 userImage = 'images/logo.png';
-            }            
+            }
             let age;
-            if (perceptor.notNull(birthday)) {
-                age = (perceptor.dateWithToday(result.birthday).diff / 365.25).toString().slice(1, 3)
+            if (kerdx.notNull(birthday)) {
+                age = (kerdx.dateWithToday(result.birthday).diff / 365.25).toString().slice(1, 3)
             }
 
             container.makeElement({
@@ -257,7 +260,7 @@ class Users {
                                         element: 'p', attributes: { class: 'show-user-work-detail-single' }, children: [
                                             { element: 'i', attributes: { class: 'icon fas fa-money-bill' } },
                                             { element: 'p', attributes: { class: 'show-user-work-detail-single-name' }, text: 'Salary' },
-                                            { element: 'p', attributes: { class: 'show-user-work-detail-single-value' }, text: '$' + perceptor.addCommaToMoney(result.salary||0) }
+                                            { element: 'p', attributes: { class: 'show-user-work-detail-single-value' }, text: '$' + kerdx.addCommaToMoney(result.salary || 0) }
                                         ]
                                     },
                                 ]
@@ -275,7 +278,7 @@ class Users {
             }
 
             container.find('#edit-user').addEventListener('click', event => {
-                let editForm = perceptor.createForm({
+                let editForm = kerdx.createForm({
                     title: 'Edit Profile', attributes: { enctype: 'multipart/form-data', id: 'edit-user-form', class: 'form', style: { border: '1px solid var(--secondary-color)' } },
                     contents: {
                         userType: { element: 'select', attributes: { id: 'user-type', name: 'userType' }, options: ['Admin', 'Staff'], selected: result.userType },
@@ -289,13 +292,13 @@ class Users {
                     columns: 2,
                 });
 
-                let popUp = perceptor.popUp(editForm);
+                let popUp = kerdx.popUp(editForm);
                 popUp.find('#toggle-window').click();
 
                 editForm.addEventListener('submit', event => {
                     event.preventDefault();
 
-                    let data = perceptor.jsonForm(editForm);
+                    let data = kerdx.jsonForm(editForm);
                     data.action = 'editUser';
                     data._id = result._id;
                     system.connect({ data }).then(result => {
@@ -314,7 +317,7 @@ class Users {
     }
 
     cloneUser(container) {
-        let user = perceptor.urlSplitter(location.href).vars.id;
+        let user = kerdx.urlSplitter(location.href).vars.id;
 
         system.get({ collection: 'users', query: { _id: user }, changeQuery: { _id: 'objectid' } }).then(result => {
             let formContent = {};
@@ -323,7 +326,7 @@ class Users {
                 formContent[i] = { element: 'input', attributes: { name: i } };
             }
 
-            let cloneForm = perceptor.createForm({
+            let cloneForm = kerdx.createForm({
                 title: 'Clone User', attributes: { id: 'clone-user-form', class: 'form', style: { border: '1px solid var(--secondary-color)' } },
                 contents: {
                     userName: { element: 'input', attributes: { id: 'user-name', name: 'userName', value: result.userName } },
@@ -345,7 +348,7 @@ class Users {
     }
 
     deleteUser(container) {
-        let user = perceptor.urlSplitter(location.href).vars.id;
+        let user = kerdx.urlSplitter(location.href).vars.id;
         if (confirm('Do you want to continue with this action?')) {
             system.connect({ data: { action: 'deleteUser', user } }).then(result => {
                 result = JSON.parse(result);
@@ -372,7 +375,7 @@ class Users {
             for (let user of users) {
                 promises[user] = system.connect({ data: { action: 'deleteUser', user } });
             }
-            perceptor.runParallel(promises, result => {
+            kerdx.runParallel(promises, result => {
                 let note = 'Selected users deleted';
                 for (let value of Object.values(result)) {
                     if (value != 'true') {
@@ -387,7 +390,7 @@ class Users {
     }
 
     makeAdmin() {
-        let user = perceptor.urlSplitter(location.href).vars.id;
+        let user = kerdx.urlSplitter(location.href).vars.id;
 
         system.connect({ data: { action: 'makeAdmin', user } }).then(result => {
             if (result == true) {
@@ -401,7 +404,7 @@ class Users {
     }
 
     makeStaff() {
-        let user = perceptor.urlSplitter(location.href).vars.id;
+        let user = kerdx.urlSplitter(location.href).vars.id;
 
         system.connect({ data: { action: 'makeStaff', user } }).then(result => {
             if (result == true) {

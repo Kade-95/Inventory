@@ -11,10 +11,22 @@
 
 .history-event{
     display: grid;
-    grid-template-rows: max-content 1fr;
+    grid-template-rows: max-content max-content 1fr;
     gap: .5em;
     width: var(--fill-parent);
     overflow: hidden;
+}
+
+.history-event-nav{
+    display: grid;
+    grid-template-columns: max-content max-content;
+    gap: .5em;
+    justify-content: center;
+    align-items: center;
+}
+
+.history-event-nav #arrow-left, .history-event-nav #arrow-right{
+    cursor: pointer;
 }
 
 .history-event-details{

@@ -19,12 +19,12 @@ class Reports {
             }
         ]);
 
-        this.url = perceptor.urlSplitter(location.href);
+        this.url = kerdx.urlSplitter(location.href);
         let page = this.url.vars.page;
         if (!Object.values(this.url.vars).length) {
             this.view(mainBody.find('#main-container-body-main-window'));
         }
-        else if (perceptor.isset(this[page])) {
+        else if (kerdx.isset(this[page])) {
             this[page](mainBody.find('#main-container-body-main-window'));
         }
         else {
@@ -35,13 +35,21 @@ class Reports {
     view(container) {
         let fetch = { reportGenerators: system.get({ collection: 'reportgenerators', query: {}, many: true }), reports: system.get({ collection: 'reports', query: {}, many: true }) };
 
-        perceptor.runParallel(fetch, result => {
+        kerdx.runParallel(fetch, result => {
             let run = {};
             let types = [];
+
+            result.reportGenerators = kerdx.array.findAll(result.reportGenerators, item => {
+                return item.recycled == undefined || item.recycled == false;
+            });
+
+            result.reports = kerdx.array.findAll(result.reports, item => {
+                return item.recycled == undefined || item.recycled == false;
+            });
+
             for (let report of result.reports) {
-                console.log(report);
-                report.timeCreated = perceptor.time_date(report.timeCreated);
-                report.lastModified = perceptor.time_date(report.lastModified);;
+                report.timeCreated = kerdx.time_date(report.timeCreated);
+                report.lastModified = kerdx.time_date(report.lastModified);;
 
                 run[report.author] = system.get({ collection: 'users', query: { _id: report.author }, options: { projection: { userName: 1, _id: 0 } }, changeQuery: { _id: 'objectid' } });
             }
@@ -52,45 +60,45 @@ class Reports {
                 }
             }
 
-            let selectCell = perceptor.cell({ element: 'select', name: 'Report', dataAttributes: {}, options: types });
+            let selectCell = kerdx.cell({ element: 'select', name: 'Report', dataAttributes: {}, options: types });
             document.body.find('#main-container-body-main-actions-others').append(selectCell);
 
             let renderTable = value => {
-                let id = perceptor.array.find(result.reportGenerators, generator => {
+                let id = kerdx.array.find(result.reportGenerators, generator => {
                     return generator.name == value;
                 })._id;
 
-                let contents = perceptor.array.findAll(result.reports, report => {
+                let contents = kerdx.array.findAll(result.reports, report => {
                     return report.content._id == id;
                 });
 
-                let reportsTable = perceptor.createTable({ title: value + ' Reports Table', contents, search: true, sort: true, projection: { content: -1 } });
+                let reportsTable = kerdx.createTable({ title: value + ' Reports Table', contents, search: true, sort: true, projection: { content: -1 } });
                 container.render(reportsTable);
 
-                perceptor.listenTable({ options: ['view', 'edit', 'clone', 'delete'], table: reportsTable }, {
+                kerdx.listenTable({ options: ['view', 'edit', 'clone', 'delete'], table: reportsTable }, {
                     click: event => {
                         let target = event.target;
-                        let { row } = target.getParents('.perceptor-table-column-cell').dataset;
-                        let table = target.getParents('.perceptor-table');
-                        let id = table.find(`.perceptor-table-column[data-name="_id"]`).find(`.perceptor-table-column-cell[data-row="${row}"]`).dataset.value;
+                        let { row } = target.getParents('.kerdx-table-column-cell').dataset;
+                        let table = target.getParents('.kerdx-table');
+                        let id = table.find(`.kerdx-table-column[data-name="_id"]`).find(`.kerdx-table-column-cell[data-row="${row}"]`).dataset.value;
 
-                        if (target.id == 'perceptor-table-option-edit') {
+                        if (target.id == 'kerdx-table-option-edit') {
                             system.redirect('reports.html?page=edit&id=' + id);
                         }
-                        else if (target.id == 'perceptor-table-option-clone') {
+                        else if (target.id == 'kerdx-table-option-clone') {
                             system.redirect('reports.html?page=clone&id=' + id);
                         }
-                        else if (target.id == 'perceptor-table-option-delete') {
+                        else if (target.id == 'kerdx-table-option-delete') {
                             system.redirect('reports.html?page=delete&id=' + id);
                         }
-                        else if (target.id == 'perceptor-table-option-view') {
+                        else if (target.id == 'kerdx-table-option-view') {
                             system.redirect('reports.html?page=show&id=' + id);
                         }
                     },
 
                     filter: (sortValue, row) => {
                         let hide = true;
-                        let cell = perceptor.array.find(row, value => {
+                        let cell = kerdx.array.find(row, value => {
                             return value.dataset.name == 'status';
                         });
                         for (let j = 0; j < row.length; j++) {
@@ -110,7 +118,7 @@ class Reports {
                 });
             };
 
-            perceptor.runParallel(run, authors => {
+            kerdx.runParallel(run, authors => {
                 for (let report of result.reports) {
                     report.author = authors[report.author].userName;
                 }
@@ -125,7 +133,7 @@ class Reports {
 
     show(container) {
         let id = this.url.vars.id;
-        let printReport = perceptor.createElement({ element: 'button', attributes: { id: 'print-report', class: 'btn btn-medium' }, text: 'Print Report' });
+        let printReport = kerdx.createElement({ element: 'button', attributes: { id: 'print-report', class: 'btn btn-medium' }, text: 'Print Report' });
 
         document.body.find('#main-container-body-main-actions-others').makeElement([
             {
@@ -153,14 +161,14 @@ class Reports {
 
     make(content, id) {
         let data = { content: JSON.stringify(content), action: 'createReport' };
-        if (perceptor.isset(id)) {
+        if (kerdx.isset(id)) {
             data.action = 'editReport';
             data.id = id;
         }
 
         system.connect({ data }).then(result => {
             if (result == true) {
-                if (perceptor.isset(id)) {
+                if (kerdx.isset(id)) {
                     system.notify({ note: 'Report Editted' });
                 }
                 else {
@@ -168,8 +176,8 @@ class Reports {
                 }
                 window.history.go(-1);
             }
-            else if (perceptor.isset(result.found)) {
-                form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `${perceptor.camelCasedToText(result.found).toUpperCase()} is already in use` });
+            else if (kerdx.isset(result.found)) {
+                form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `${kerdx.camelCasedToText(result.found).toUpperCase()} is already in use` });
             }
             else {
                 form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `Error Unknown` });
@@ -179,7 +187,7 @@ class Reports {
 
     edit(container) {
         let id = this.url.vars.id;
-        let saveReport = perceptor.createElement({ element: 'button', attributes: { id: 'save-report', class: 'btn btn-medium' }, text: 'Edit Report' });
+        let saveReport = kerdx.createElement({ element: 'button', attributes: { id: 'save-report', class: 'btn btn-medium' }, text: 'Edit Report' });
         document.body.find('#main-container-body-main-actions-others').append(saveReport);
 
         system.get({ collection: 'reports', query: { _id: id }, changeQuery: { _id: 'objectid' } }).then(result => {
@@ -198,7 +206,7 @@ class Reports {
 
     clone(container) {
         let id = this.url.vars.id;
-        let saveReport = perceptor.createElement({ element: 'button', attributes: { id: 'save-report', class: 'btn btn-medium' }, text: 'Clone Report' });
+        let saveReport = kerdx.createElement({ element: 'button', attributes: { id: 'save-report', class: 'btn btn-medium' }, text: 'Clone Report' });
         document.body.find('#main-container-body-main-actions-others').append(saveReport);
 
         system.get({ collection: 'reports', query: { _id: id }, changeQuery: { _id: 'objectid' } }).then(result => {
@@ -216,17 +224,17 @@ class Reports {
     }
 
     create(container) {
-        perceptor.runParallel({
+        kerdx.runParallel({
             reportGenerators: system.get({ collection: 'reportgenerators', query: {}, many: true })
         }, result => {
             let reportGenerators = result.reportGenerators;
-            let types = perceptor.object.valueOfObjectArray(reportGenerators, 'name');
-            let selectCell = perceptor.cell({ element: 'select', name: 'Report', dataAttributes: {}, options: types });
-            let saveReport = perceptor.createElement({ element: 'button', attributes: { id: 'save-report', class: 'btn btn-medium', style: { display: 'none' } }, text: 'Save Report' });
+            let types = kerdx.object.valueOfObjectArray(reportGenerators, 'name');
+            let selectCell = kerdx.cell({ element: 'select', name: 'Report', dataAttributes: {}, options: types });
+            let saveReport = kerdx.createElement({ element: 'button', attributes: { id: 'save-report', class: 'btn btn-medium', style: { display: 'none' } }, text: 'Save Report' });
 
             document.body.find('#main-container-body-main-actions-others').append(selectCell, saveReport);
 
-            let selectedGenerator = perceptor.array.find(reportGenerators, generator => {
+            let selectedGenerator = kerdx.array.find(reportGenerators, generator => {
                 return generator.name == types[0];
             });
 
@@ -238,7 +246,7 @@ class Reports {
 
             selectCell.find('#Report-cell').onChanged(value => {
                 saveReport.css({ display: 'none' });
-                selectedGenerator = perceptor.array.find(reportGenerators, form => {
+                selectedGenerator = kerdx.array.find(reportGenerators, form => {
                     return form.name == value;
                 });
                 this.renderReport(selectedGenerator, displayReport);
@@ -253,7 +261,7 @@ class Reports {
     renderReport(data, callback, flag) {
 
         let done = () => {
-            let report = perceptor.createElement({
+            let report = kerdx.createElement({
                 element: 'div', attributes: {
                     class: 'report-container'
                 }, children: [
@@ -271,7 +279,7 @@ class Reports {
             callback(report, data);
         }
 
-        if (perceptor.isset(flag)) {
+        if (kerdx.isset(flag)) {
             done();
         }
         else {
@@ -279,7 +287,7 @@ class Reports {
                 data.contents = durationed;
                 system.getSources(data.contents, fetched => {
                     for (let content of data.contents) {
-                        if (perceptor.isset(fetched[content.name])) {
+                        if (kerdx.isset(fetched[content.name])) {
                             content.fetched = fetched[content.name];
                         }
                     }
@@ -294,7 +302,7 @@ class Reports {
 
     displayReport(container, data) {
         if (data.display == 'Text') {
-            let sources = perceptor.allCombine(data.source, '$#&{', '}&#$');
+            let sources = kerdx.allCombine(data.source, '$#&{', '}&#$');
             let text = data.source;
 
             for (let i = 0; i < sources.length; i++) {
@@ -313,7 +321,7 @@ class Reports {
             for (let i = 0; i < data.fetched.length; i++) {
                 contents = contents.concat(data.fetched[i]);
             }
-            let table = perceptor.createTable({ title: data.title, contents });
+            let table = kerdx.createTable({ title: data.title, contents });
             container.append(table)
         }
         else if (data.display == 'List') {
@@ -360,7 +368,7 @@ class Reports {
     }
 
     getGraphsDuration(contents, callback) {
-        let details = perceptor.createElement({ element: 'div', attributes: { class: 'graph-details' } });
+        let details = kerdx.createElement({ element: 'div', attributes: { class: 'graph-details' } });
 
         for (let con of contents) {
             if (con.display.includes('Graph') || con.display.includes('Chart')) {
@@ -388,7 +396,7 @@ class Reports {
                     ]
                 });
 
-                if (perceptor.isset(con.duration)) {
+                if (kerdx.isset(con.duration)) {
                     single.find(`#${con.name}-start-date`).value = con.duration.startDate;
                     single.find(`#${con.name}-start-time`).value = con.duration.startTime;
                     single.find(`#${con.name}-end-date`).value = con.duration.endDate;
@@ -397,7 +405,7 @@ class Reports {
             }
         }
 
-        let popUp = perceptor.popUp(details, { title: 'Set Durtions for Report Graphs' });
+        let popUp = kerdx.popUp(details, { title: 'Set Durtions for Report Graphs' });
         popUp.find('#toggle-window').click();
 
         if (contents.length) {
@@ -424,7 +432,7 @@ class Reports {
     }
 
     getGraphsLabels(contents, callback) {
-        let details = perceptor.createElement({ element: 'div', attributes: { class: 'graph-details' } });
+        let details = kerdx.createElement({ element: 'div', attributes: { class: 'graph-details' } });
 
         for (let con of contents) {
             if (con.display.includes('Graph') || con.display.includes('Chart')) {
@@ -446,13 +454,13 @@ class Reports {
                     ]
                 });
 
-                if (perceptor.isset(con.labels)) {
+                if (kerdx.isset(con.labels)) {
                     single.find(`#${con.name}-label`).value = con.labels.join(',');
                 }
             }
         }
 
-        let popUp = perceptor.popUp(details, { title: 'Set Labels for Report Graphs' });
+        let popUp = kerdx.popUp(details, { title: 'Set Labels for Report Graphs' });
         popUp.find('#toggle-window').click();
 
         if (contents.length) {

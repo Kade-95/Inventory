@@ -1,11 +1,11 @@
 let reportGenerators = (mainBody) => {
     let settingsMainWindow = mainBody.find('#settings-main-window');
-    let loading = perceptor.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
-    let urlVars = perceptor.urlSplitter(location.href);
+    let loading = kerdx.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
+    let urlVars = kerdx.urlSplitter(location.href);
 
     let dataContainer;
     let makeData = (form, callback, data) => {
-        let popUp = perceptor.popUp(form);
+        let popUp = kerdx.popUp(form);
         data = data || {};
         form.find('#display').addEventListener('change', event => {
             form.find('#source').value = '';
@@ -46,7 +46,7 @@ let reportGenerators = (mainBody) => {
         form.addEventListener('submit', event => {
             event.preventDefault();
 
-            let formValidation = perceptor.validateForm(form);
+            let formValidation = kerdx.validateForm(form);
 
             if (!formValidation.flag) {
                 form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `Form ${formValidation.elementName} is faulty` });
@@ -61,19 +61,19 @@ let reportGenerators = (mainBody) => {
                 }
             }
 
-            callback(perceptor.jsonForm(form));
+            callback(kerdx.jsonForm(form));
             popUp.remove();
         });
     }
 
     let editData = (data, callback) => {
-        let editDataForm = perceptor.createForm({
+        let editDataForm = kerdx.createForm({
             title: 'Edit Data', attributes: { enctype: 'multipart/form-data', id: 'create-edit-data-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name', value: data.name } },
                 title: { element: 'input', attributes: { id: 'title', name: 'title', ignore: true, value: data.title } },
                 display: { element: 'select', attributes: { id: 'display', name: 'display' }, options: ['Null', 'Line Graph', 'Pie Chart', 'Bar Graph', 'Table', 'List', 'Text'], note: 'Graph must have a source of List only.', selected: data.display },
-                source: { element: 'input', note: 'This depends on the display you choose.', attributes: { value: data.source, id: 'source', name: 'source', ignore: true }, label: perceptor.createElement({ element: 'a', text: 'Source', children: [{ element: 'i', attributes: { class: 'fas fa-plus', id: 'set-source' } }] }).innerHTML },
+                source: { element: 'input', note: 'This depends on the display you choose.', attributes: { value: data.source, id: 'source', name: 'source', ignore: true }, label: kerdx.createElement({ element: 'a', text: 'Source', children: [{ element: 'i', attributes: { class: 'fas fa-plus', id: 'set-source' } }] }).innerHTML },
                 show: { element: 'select', attributes: { id: 'show', name: 'show' }, options: ['True', 'False'], selected: data.show }
             },
             buttons: {
@@ -85,13 +85,13 @@ let reportGenerators = (mainBody) => {
     };
 
     let cloneData = (data, callback) => {
-        let editDataForm = perceptor.createForm({
+        let editDataForm = kerdx.createForm({
             title: 'Clone Data', attributes: { enctype: 'multipart/form-data', id: 'create-clone-data-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name', value: data.name } },
                 title: { element: 'select', attributes: { id: 'title', name: 'title', ignore: true, value: data.title } },
                 display: { element: 'select', attributes: { id: 'display', name: 'display' }, options: ['Null', 'Line Graph', 'Pie Chart', 'Bar Graph', 'Table', 'List', 'Text'], note: 'Graph must have a source of List only.', selected: data.display },
-                source: { element: 'input', note: 'This depends on the display you choose.', attributes: { value: data.source, id: 'source', name: 'source', ignore: true }, label: perceptor.createElement({ element: 'a', text: 'Source', children: [{ element: 'i', attributes: { class: 'fas fa-plus', id: 'set-source' } }] }).innerHTML },
+                source: { element: 'input', note: 'This depends on the display you choose.', attributes: { value: data.source, id: 'source', name: 'source', ignore: true }, label: kerdx.createElement({ element: 'a', text: 'Source', children: [{ element: 'i', attributes: { class: 'fas fa-plus', id: 'set-source' } }] }).innerHTML },
                 show: { element: 'select', attributes: { id: 'show', name: 'show' }, options: ['True', 'False'], selected: data.show }
             },
             buttons: {
@@ -103,13 +103,13 @@ let reportGenerators = (mainBody) => {
     };
 
     let createData = (callback) => {
-        let createDataForm = perceptor.createForm({
+        let createDataForm = kerdx.createForm({
             title: 'Create Data', attributes: { enctype: 'multipart/form-data', id: 'create-create-data-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name' } },
                 title: { element: 'input', attributes: { id: 'title', name: 'title', ignore: true } },
                 display: { element: 'select', attributes: { id: 'display', name: 'display' }, options: ['Null', 'Line Graph', 'Pie Chart', 'Bar Graph', 'Table', 'List', 'Text'], note: 'Graph must have a source of List only.' },
-                source: { element: 'input', note: 'This depends on the display you choose.', attributes: { id: 'source', name: 'source', ignore: true }, label: perceptor.createElement({ element: 'a', text: 'Source', children: [{ element: 'i', attributes: { class: 'fas fa-plus', id: 'set-source' } }] }).innerHTML },
+                source: { element: 'input', note: 'This depends on the display you choose.', attributes: { id: 'source', name: 'source', ignore: true }, label: kerdx.createElement({ element: 'a', text: 'Source', children: [{ element: 'i', attributes: { class: 'fas fa-plus', id: 'set-source' } }] }).innerHTML },
                 show: { element: 'select', attributes: { id: 'show', name: 'show' }, options: ['True', 'False'] }
             },
             buttons: {
@@ -121,7 +121,7 @@ let reportGenerators = (mainBody) => {
     }
 
     let preview = (form) => {
-        let data = perceptor.jsonForm(form);
+        let data = kerdx.jsonForm(form);
         data.contents = compileData(form);
 
         if (data.contents.length == 0) {
@@ -131,7 +131,7 @@ let reportGenerators = (mainBody) => {
         getGraphsDuration(data.contents, durationed => {//set the durations
             data.contents = durationed;
             system.getSources(data.contents, fetched => {
-                let report = perceptor.createElement({
+                let report = kerdx.createElement({
                     element: 'div', attributes: {
                         class: 'report-container'
                     }, children: [
@@ -144,14 +144,14 @@ let reportGenerators = (mainBody) => {
                 });
 
                 for (let content of data.contents) {
-                    if (perceptor.isset(fetched[content.name])) {
+                    if (kerdx.isset(fetched[content.name])) {
                         content.fetched = fetched[content.name];
                     }
                 }
                 getGraphsLabels(data.contents, labelled => {
                     data.contents = labelled;
 
-                    let reportPopup = perceptor.popUp(report);
+                    let reportPopup = kerdx.popUp(report);
                     reportPopup.find('#toggle-window').click();
                     for (let content of data.contents) {
                         displayReport(report.find('#report-window'), content);
@@ -163,7 +163,7 @@ let reportGenerators = (mainBody) => {
 
     let displayReport = (container, data) => {
         if (data.display == 'Text') {
-            let sources = perceptor.allCombine(data.source, '$#&{', '}&#$');
+            let sources = kerdx.allCombine(data.source, '$#&{', '}&#$');
             let text = data.source;
 
             for (let i = 0; i < sources.length; i++) {
@@ -182,7 +182,7 @@ let reportGenerators = (mainBody) => {
             for (let i = 0; i < data.fetched.length; i++) {
                 contents = contents.concat(data.fetched[i]);
             }
-            let table = perceptor.createTable({ title: data.title, contents });
+            let table = kerdx.createTable({ title: data.title, contents });
             container.append(table)
         }
         else if (data.display == 'List') {
@@ -229,7 +229,7 @@ let reportGenerators = (mainBody) => {
     }
 
     let getGraphsDuration = (contents, callback) => {
-        let details = perceptor.createElement({ element: 'div', attributes: { class: 'graph-details' } });
+        let details = kerdx.createElement({ element: 'div', attributes: { class: 'graph-details' } });
 
         for (let con of contents) {
             if (con.display.includes('Graph') || con.display.includes('Chart')) {
@@ -259,7 +259,7 @@ let reportGenerators = (mainBody) => {
             }
         }
 
-        let popUp = perceptor.popUp(details, { title: 'Set Durtions for Report Graphs' });
+        let popUp = kerdx.popUp(details, { title: 'Set Durtions for Report Graphs' });
         popUp.find('#toggle-window').click();
 
         if (contents.length) {
@@ -286,7 +286,7 @@ let reportGenerators = (mainBody) => {
     }
 
     let getGraphsLabels = (contents, callback) => {
-        let details = perceptor.createElement({ element: 'div', attributes: { class: 'graph-details' } });
+        let details = kerdx.createElement({ element: 'div', attributes: { class: 'graph-details' } });
 
         for (let con of contents) {
             if (con.display.includes('Graph') || con.display.includes('Chart')) {
@@ -310,7 +310,7 @@ let reportGenerators = (mainBody) => {
             }
         }
 
-        let popUp = perceptor.popUp(details, { title: 'Set Labels for Report Graphs' });
+        let popUp = kerdx.popUp(details, { title: 'Set Labels for Report Graphs' });
         popUp.find('#toggle-window').click();
 
         if (contents.length) {
@@ -374,7 +374,7 @@ let reportGenerators = (mainBody) => {
                         },
                         {
                             element: 'div', attributes: { id: 'reportgenerator-contents' }, children: [
-                                perceptor.createTable({
+                                kerdx.createTable({
                                     title: 'Report Generator Data', contents: reportgenerator.contents, sort: true
                                 })
                             ]
@@ -395,7 +395,7 @@ let reportGenerators = (mainBody) => {
 
     let clone = (id) => {
         system.get({ collection: 'reportgenerators', query: { _id: id }, projection: { image: 0 }, changeQuery: { _id: 'objectid' } }).then(reportgenerator => {
-            let cloneReportGenerator = perceptor.createForm({
+            let cloneReportGenerator = kerdx.createForm({
                 title: 'Clone Form', attributes: { enctype: 'multipart/form-data', id: 'clone-custom-form-form', class: 'form' },
                 contents: {
                     name: { element: 'input', attributes: { id: 'name', name: 'name', value: reportgenerator.name } },
@@ -405,20 +405,20 @@ let reportGenerators = (mainBody) => {
                     'dataContainer': { element: 'div', attributes: { id: 'data-container' } },
                     'data': {
                         element: 'div', attributes: { id: 'single-form-actions-container' }, children: [
-                            { element: 'i', attributes: { class: 'action', id: 'new-icon', title: 'Add Data', 'data-icon': perceptor.icons.plus } },
-                            { element: 'i', attributes: { class: 'action', id: 'preview-icon', title: 'Add Data', 'data-icon': perceptor.icons.eye } }
+                            { element: 'i', attributes: { class: 'action', id: 'new-icon', title: 'Add Data', 'data-icon': kerdx.icons.plus } },
+                            { element: 'i', attributes: { class: 'action', id: 'preview-icon', title: 'Add Data', 'data-icon': kerdx.icons.eye } }
                         ]
                     },
                     submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Clone', state: { name: 'submit', owner: '#clone-custom-form-form' } },
                 }, columns: 2
             });
 
-            let dataContainer = cloneReportGenerator.find('.perceptor-form-buttons').find('#data-container');
+            let dataContainer = cloneReportGenerator.find('.kerdx-form-buttons').find('#data-container');
 
             for (let content of reportgenerator.contents) {
                 renderData(content, dataContainer);
             }
-            let popUp = perceptor.popUp(cloneReportGenerator);
+            let popUp = kerdx.popUp(cloneReportGenerator);
             popUp.find('#toggle-window').click();
 
             make(cloneReportGenerator);
@@ -426,7 +426,7 @@ let reportGenerators = (mainBody) => {
     }
 
     let edit = (reportgenerator) => {
-        let editReportGenerator = perceptor.createForm({
+        let editReportGenerator = kerdx.createForm({
             title: 'Edit Report Generator', attributes: { enctype: 'multipart/form-data', id: 'edit-report-generator-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name', value: reportgenerator.name } },
@@ -436,27 +436,27 @@ let reportGenerators = (mainBody) => {
                 'dataContainer': { element: 'div', attributes: { id: 'data-container' } },
                 'data': {
                     element: 'div', attributes: { id: 'single-form-actions-container' }, children: [
-                        { element: 'i', attributes: { id: 'new-icon', class: 'action', title: 'Add Data', 'data-icon': perceptor.icons.plus } },
-                        { element: 'i', attributes: { id: 'preview-icon', class: 'action', title: 'Preview Report', 'data-icon': perceptor.icons.eye } }
+                        { element: 'i', attributes: { id: 'new-icon', class: 'action', title: 'Add Data', 'data-icon': kerdx.icons.plus } },
+                        { element: 'i', attributes: { id: 'preview-icon', class: 'action', title: 'Preview Report', 'data-icon': kerdx.icons.eye } }
                     ]
                 },
                 submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Edit', state: { name: 'submit', owner: '#edit-report-generator-form' } },
             }, columns: 2
         });
 
-        let dataContainer = editReportGenerator.find('.perceptor-form-buttons').find('#data-container');
+        let dataContainer = editReportGenerator.find('.kerdx-form-buttons').find('#data-container');
         for (let content of reportgenerator.contents) {
             renderData(content, dataContainer);
         }
-        let popUp = perceptor.popUp(editReportGenerator);
+        let popUp = kerdx.popUp(editReportGenerator);
         popUp.find('#toggle-window').click();
 
         make(editReportGenerator, reportgenerator._id);
     }
 
     let create = () => {
-        let createForm = perceptor.createForm({
-            title: 'Create Report Generator', attributes: { enctype: 'multipart/perceptor-form-data', id: 'create-report-generator-form', class: 'form' },
+        let createForm = kerdx.createForm({
+            title: 'Create Report Generator', attributes: { enctype: 'multipart/kerdx-form-data', id: 'create-report-generator-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name' } },
                 title: { element: 'input', attributes: { id: 'title', name: 'title' } },
@@ -465,15 +465,15 @@ let reportGenerators = (mainBody) => {
                 'dataContainer': { element: 'div', attributes: { id: 'data-container' } },
                 'data': {
                     element: 'div', attributes: { id: 'single-form-actions-container' }, children: [
-                        { element: 'i', attributes: { id: 'new-icon', title: 'Add Data', class: 'action', 'data-icon': perceptor.icons.plus } },
-                        { element: 'i', attributes: { id: 'preview-icon', class: 'action', title: 'Preview Report Generator', 'data-icon': perceptor.icons.eye } }
+                        { element: 'i', attributes: { id: 'new-icon', title: 'Add Data', class: 'action', 'data-icon': kerdx.icons.plus } },
+                        { element: 'i', attributes: { id: 'preview-icon', class: 'action', title: 'Preview Report Generator', 'data-icon': kerdx.icons.eye } }
                     ]
                 },
                 submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Create', state: { name: 'submit', owner: '#create-report-generator-form' } },
             }, columns: 2
         });
 
-        let popUp = perceptor.popUp(createForm);
+        let popUp = kerdx.popUp(createForm);
         popUp.find('#toggle-window').click();
         make(createForm);
     }
@@ -486,7 +486,7 @@ let reportGenerators = (mainBody) => {
     }
 
     let make = (form, id) => {
-        dataContainer = form.find('.perceptor-form-buttons').find('#data-container');
+        dataContainer = form.find('.kerdx-form-buttons').find('#data-container');
 
         form.find('#new-icon').addEventListener('click', event => {
             createData(data => {
@@ -519,7 +519,7 @@ let reportGenerators = (mainBody) => {
         form.addEventListener('submit', event => {
             event.preventDefault();
 
-            let formValidation = perceptor.validateForm(form);
+            let formValidation = kerdx.validateForm(form);
 
             if (!formValidation.flag) {
                 loading.replaceWith(form.getState({ name: 'submit' }));
@@ -527,7 +527,7 @@ let reportGenerators = (mainBody) => {
                 return;
             }
 
-            let data = perceptor.jsonForm(form);
+            let data = kerdx.jsonForm(form);
             data.contents = compileData(form);
 
             if (data.contents.length == 0) {
@@ -535,27 +535,27 @@ let reportGenerators = (mainBody) => {
                 return;
             }
 
-            data.action = perceptor.isset(id) ? 'editReportGenerator' : 'createReportGenerator';
-            if (perceptor.isset(id)) data.id = id
+            data.action = kerdx.isset(id) ? 'editReportGenerator' : 'createReportGenerator';
+            if (kerdx.isset(id)) data.id = id
 
             data.contents = JSON.stringify(data.contents);
             system.connect({ data }).then(result => {
                 if (result == 1) {
-                    system.notify({ note: `Report Generator ${perceptor.isset(id) ? 'Editted' : 'Created'}` });
+                    system.notify({ note: `Report Generator ${kerdx.isset(id) ? 'Editted' : 'Created'}` });
                     system.reload();
                 }
                 else if (result.found) {
                     system.notify({ note: `${result.found} already in exists` });
                 }
                 else {
-                    system.notify({ note: `Report Generator was not ${perceptor.isset(id) ? 'Editted' : 'Created'}` });
+                    system.notify({ note: `Report Generator was not ${kerdx.isset(id) ? 'Editted' : 'Created'}` });
                 }
             });
         });
     }
 
     let getReadable = (data, type) => {
-        let readable = perceptor.createElement({ element: 'span', attributes: { id: `readable${type}`, class: `readable-${type}-container` } });
+        let readable = kerdx.createElement({ element: 'span', attributes: { id: `readable${type}`, class: `readable-${type}-container` } });
 
         for (let name in data) {
             let aRead = readable.makeElement({
@@ -589,7 +589,7 @@ let reportGenerators = (mainBody) => {
         newData.value = data;
     }
 
-    if (!perceptor.isset(urlVars.vars.action) || urlVars.vars.action == 'view') {
+    if (!kerdx.isset(urlVars.vars.action) || urlVars.vars.action == 'view') {
         settingsMainWindow.makeElement([
             {
                 element: 'div', attributes: { class: 'settings-sub-menu' }, children: [
@@ -602,26 +602,30 @@ let reportGenerators = (mainBody) => {
         ]);
         let mainContentWindow = settingsMainWindow.find('.settings-content-window');
 
-        system.get({ collection: 'reportgenerators', query: {}, projection: { name: 1, title: 1 }, many: true }).then(customreports => {
-            let reportGeneratorTable = perceptor.createTable({
-                title: 'All Report Generators', contents: customreports, search: true, sort: true
+        system.get({ collection: 'reportgenerators', query: {}, projection: { name: 1, title: 1, recycled: 1 }, many: true }).then(foundReportGenerators => {
+            foundReportGenerators = kerdx.array.findAll(foundReportGenerators, item => {
+                return item.recycled == undefined || item.recycled == false;
+            });
+
+            let reportGeneratorTable = kerdx.createTable({
+                title: 'All Report Generators', contents: foundReportGenerators, search: true, sort: true
             });
 
             mainContentWindow.render(reportGeneratorTable);
-            perceptor.listenTable({ options: ['view', 'clone', 'delete'], table: reportGeneratorTable }, {
+            kerdx.listenTable({ options: ['view', 'clone', 'delete'], table: reportGeneratorTable }, {
                 click: event => {
                     let target = event.target;
-                    let { row } = target.getParents('.perceptor-table-column-cell').dataset;
-                    let table = target.getParents('.perceptor-table');
-                    let id = table.find(`.perceptor-table-column[data-name="_id"]`).find(`.perceptor-table-column-cell[data-row="${row}"]`).dataset.value;
+                    let { row } = target.getParents('.kerdx-table-column-cell').dataset;
+                    let table = target.getParents('.kerdx-table');
+                    let id = table.find(`.kerdx-table-column[data-name="_id"]`).find(`.kerdx-table-column-cell[data-row="${row}"]`).dataset.value;
 
-                    if (target.id == 'perceptor-table-option-view') {
+                    if (target.id == 'kerdx-table-option-view') {
                         system.redirect('settings.html?page=reportGenerators&action=show&id=' + id);
                     }
-                    else if (target.id == 'perceptor-table-option-clone') {
+                    else if (target.id == 'kerdx-table-option-clone') {
                         clone(id);
                     }
-                    else if (target.id == 'perceptor-table-option-delete') {
+                    else if (target.id == 'kerdx-table-option-delete') {
                         system.redirect('settings.html?page=reportGenerators&action=delete&id=' + id);
                     }
                 }

@@ -1,7 +1,7 @@
 let views = (mainBody) => {
     let settingsMainWindow = mainBody.find('#settings-main-window');
-    let loading = perceptor.createElement({ element: 'i', attributes: { class: 'fas fa-redo fa-spin' } });
-    let urlVars = perceptor.urlSplitter(location.href);
+    let loading = kerdx.createElement({ element: 'i', attributes: { class: 'fas fa-redo fa-spin' } });
+    let urlVars = kerdx.urlSplitter(location.href);
     let myView, monitorView;
     let user = document.body.dataset.user;
     let viewsContainer = settingsMainWindow.makeElement({
@@ -19,17 +19,17 @@ let views = (mainBody) => {
     });
 
     let aColor = (text, name, value) => {
-        return perceptor.createElement({
+        return kerdx.createElement({
             element: 'span', attributes: { class: 'views-single-color' }, children: [
                 { element: 'i', attributes: { class: 'icon fas fa-brush' } },
                 { element: 'a', attributes: { class: 'views-color-name' }, text },
-                { element: 'input', attributes: { value: perceptor.colorHandler.rgbToHex(value), class: 'view-color-value', type: 'color', id: name } }
+                { element: 'input', attributes: { value: kerdx.colorHandler.rgbToHex(value), class: 'view-color-value', type: 'color', id: name } }
             ]
         });
     }
 
     let aTheme = (text, name) => {
-        return perceptor.createElement({
+        return kerdx.createElement({
             element: 'span', attributes: { class: 'views-single-theme' }, children: [
                 { element: 'i', attributes: { class: 'icon fas fa-palette' } },
                 { element: 'a', attributes: { class: 'views-theme-name' }, text },
@@ -55,15 +55,15 @@ let views = (mainBody) => {
         });
 
         colorView.find('#primary-color').onChanged(value => {
-            monitorView.view.primaryColor = perceptor.colorHandler.hexToRGB(value);
+            monitorView.view.primaryColor = kerdx.colorHandler.hexToRGB(value);
         });
 
         colorView.find('#secondary-color').onChanged(value => {
-            monitorView.view.secondaryColor = perceptor.colorHandler.hexToRGB(value);
+            monitorView.view.secondaryColor = kerdx.colorHandler.hexToRGB(value);
         });
 
         colorView.find('#accient-color').onChanged(value => {
-            monitorView.view.accientColor = perceptor.colorHandler.hexToRGB(value);
+            monitorView.view.accientColor = kerdx.colorHandler.hexToRGB(value);
         });
     }
 
@@ -81,14 +81,14 @@ let views = (mainBody) => {
             let target = event.target;
             if (target.classList.contains('views-theme-select')) {
                 let theme = availableThemes[target.id];
-                perceptor.object.copy(theme, monitorView.view);
+                kerdx.object.copy(theme, monitorView.view);
             }
         });
     }
 
     system.get({ collection: 'views', query: { owner: user } }).then(view => {
         myView = view || {};
-        monitorView = perceptor.object.onChanged(myView, (target) => {
+        monitorView = kerdx.object.onChanged(myView, (target) => {
             let t = setTimeout(() => {
                 system.connect({ data: { action: 'saveView', view: JSON.stringify(myView.view) } }).then(result => {
                     system.loadView(myView.view);

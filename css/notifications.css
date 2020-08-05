@@ -58,3 +58,15 @@
 .single-notification-text{
     overflow: hidden;
 }
+
+.notification-item{
+    display: grid;
+    grid-template-rows: repeat(2, max-content);
+    gap: 1em;
+    padding: .4em;
+    justify-items: flex-start;
+}
+
+.notification-item > #notification-message{
+    font-size: 1.3em;
+}
