@@ -45,7 +45,9 @@ class Forms {
 
             for (let form of result.forms) {
                 form.time = new Date(Math.floor(form.time)).toLocaleDateString();
-
+                if (!types.includes(form.selectedForm.name)) {
+                    types.push(form.selectedForm.name);
+                }
                 run[form.author] = system.get({ collection: 'users', query: { _id: form.author }, options: { projection: { userName: 1, _id: 0 } }, changeQuery: { _id: 'objectid' } });
             }
 
@@ -65,26 +67,26 @@ class Forms {
             document.body.find('#more-forms-controls').append(selectCell);
 
             let renderTable = value => {
-                let contents = [];
-                let selectedForm = kerdx.array.find(result.customForms, form => {
-                    return form.name == value;
-                });
-
-                for (let form of result.forms) {
-                    if (form.type == selectedForm._id) {
-                        let formContent = {};
-                        kerdx.object.copy(form, formContent);
-                        for (let content of selectedForm.contents) {
-                            if (content.show == 'True') {
-                                formContent[content.name] = form.contents[content.name];
-                            }
-                        }
-                        formContent.contents = Object.keys(formContent.contents).length;
-                        formContent.tasks = Object.keys(formContent.tasks).length;
-                        contents.push(formContent);
-                    }
+                let id;
+                if (result.customForms.length > 0) {
+                    id = kerdx.array.find(result.customForms, form => {
+                        return form.name == value;
+                    })._id;
+                }
+                else {
+                    id = kerdx.array.find(result.forms, form => {
+                        return form.selectedForm.name == value;
+                    }).selectedForm._id;
                 }
 
+                let contents = kerdx.array.findAll(result.reports, report => {
+                    return report.content._id == id;
+                });
+
+                drawTable(contents, value);
+            };
+
+            let drawTable = (contents, value) => {
                 let formsTable = kerdx.createTable({ title: value + ' Forms Table', contents, search: true, sort: true, filter: ['All', 'Enough', 'Excess', 'Low'] });
                 container.render(formsTable);
 
@@ -126,9 +128,15 @@ class Forms {
                         return hide;
                     }
                 });
-            };
+            }
 
-            renderTable(types[0])
+            if (types > 0) {
+                renderTable(types[0]);
+            }
+            else {
+                drawTable(result.forms, 'All');
+            }
+
             selectCell.find('#Form-cell').onChanged(value => {
                 renderTable(value);
             });
@@ -257,7 +265,7 @@ class Forms {
         });
     }
 
-    make(form, tasks, id) {
+    make(form, tasks, selectedForm, id) {
         let loading = kerdx.createElement({ element: 'span', attributes: { class: 'loading loading-medium' } });
 
         let nameTasks = () => {
@@ -301,8 +309,10 @@ class Forms {
                 action: 'createForm',
                 type: form.dataset.type,
                 contents: JSON.stringify(kerdx.jsonForm(form.find('.kerdx-form-contents'))),
-                tasks: {}
+                tasks: {},
+                selectedForm: JSON.stringify(selectedForm)
             }
+
             let allTasks = form.findAll('.single-task');
             for (let i = 0; i < allTasks.length; i++) {
                 let { name } = allTasks[i].dataset;
@@ -346,95 +356,101 @@ class Forms {
     edit(container) {
         let id = this.url.vars.id;
         system.get({ collection: 'forms', query: { _id: id }, changeQuery: { _id: 'objectid' } }).then(result => {
-            let type = result.contents.type;
-            system.get({ collection: 'customforms', query: { _id: type }, changeQuery: { _id: 'objectid' } }).then(selectedForm => {
-                let displayForm = (contents, tasks) => {
-                    for (let i = 0; i < selectedForm.contents.length; i++) {
+            let selectedForm = result.selectedForm;
+            let displayForm = (contents, tasks) => {
+                for (let i = 0; i < selectedForm.contents.length; i++) {
+                    if (kerdx.isset(contents[selectedForm.contents[i].name].params)) {
+                        contents[selectedForm.contents[i].name].params.attributes.value = result.contents[selectedForm.contents[i].name];
+                    }
+                    else {
                         contents[selectedForm.contents[i].name].attributes.value = result.contents[selectedForm.contents[i].name];
                     }
+                }
 
-                    let editForm = kerdx.createForm({
-                        title: 'Edit ' + selectedForm.title, attributes: { enctype: 'multipart/form-data', id: 'edit-form-form', class: 'form', 'data-type': selectedForm._id, 'data-target': selectedForm.target, style: { border: '1px solid var(--secondary-color)', maxWidth: '100%' } },
-                        contents: contents,
-                        buttons: {
-                            tasks: {
-                                element: 'div', attributes: { id: 'tasks-container' }
-                            },
-                            actions: {
-                                element: 'div', attributes: { id: 'single-form-actions-container' }, children: [
-                                    { element: 'i', attributes: { class: 'action', id: 'add-new-task', title: 'Add New Task', 'data-icon': kerdx.icons.plus } },
-                                ]
-                            },
-                            submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Edit', state: { name: 'submit', owner: '#edit-form-form' } },
+                let editForm = kerdx.createForm({
+                    title: 'Edit ' + selectedForm.title, attributes: { enctype: 'multipart/form-data', id: 'edit-form-form', class: 'form', 'data-type': selectedForm._id, 'data-target': selectedForm.target, style: { border: '1px solid var(--secondary-color)', maxWidth: '100%' } },
+                    contents: contents,
+                    buttons: {
+                        tasks: {
+                            element: 'div', attributes: { id: 'tasks-container' }
                         },
-                        columns: 2
-                    });
-                    let target = kerdx.inBetween(selectedForm.target, '$#&{', '}&#$');
-                    try {
-                        target = JSON.parse(target).collection;
-                    } catch (error) {
-                        system.notify({ note: "Form's Target is invalid" });
-                        target = '';
-                    }
+                        actions: {
+                            element: 'div', attributes: { id: 'single-form-actions-container' }, children: [
+                                { element: 'i', attributes: { class: 'action', id: 'add-new-task', title: 'Add New Task', 'data-icon': kerdx.icons.plus } },
+                            ]
+                        },
+                        submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Edit', state: { name: 'submit', owner: '#edit-form-form' } },
+                    },
+                    columns: 2
+                });
+                let target = kerdx.inBetween(selectedForm.target, '$#&{', '}&#$');
+                try {
+                    target = JSON.parse(target).collection;
+                } catch (error) {
+                    system.notify({ note: "Form's Target is invalid" });
+                    target = '';
+                }
 
-                    if (target != '') {
-                        kerdx.runParallel({ ids: system.get({ collection: target, query: {}, projection: { _id: 1 }, many: true }) }, fetched => {
-                            let list = kerdx.object.valueOfObjectArray(fetched.ids, '_id');
-                            list.unshift('Null');
+                if (target != '') {
+                    kerdx.runParallel({ ids: system.get({ collection: target, query: {}, projection: { _id: 1 }, many: true }) }, fetched => {
+                        let list = kerdx.object.valueOfObjectArray(fetched.ids, '_id');
+                        list.unshift('Null');
 
-                            for (let name in result.tasks) {
-                                for (let done of result.tasks[name]) {
-                                    let task = editForm.find('#tasks-container').makeElement(tasks[name]);
-                                    task.find('.task-id').setOptions(list, { selected: done._id });
-                                    task.find('.task-value').value = done.value;
-                                    task.dataset.action = done.action;
-                                }
+                        for (let name in result.tasks) {
+                            for (let done of result.tasks[name]) {
+                                let task = editForm.find('#tasks-container').makeElement(tasks[name]);
+                                task.find('.task-id').setOptions(list, { selected: done._id });
+                                task.find('.task-value').value = done.value;
+                                task.dataset.action = done.action;
                             }
-                        });
-                    }
+                        }
+                    });
+                }
 
-                    container.render(editForm);
-                    this.make(editForm, tasks, id);
-                };
+                container.render(editForm);
+                this.make(editForm, tasks, selectedForm, id);
+            };
 
-                this.renderForm(selectedForm, displayForm);
-            });
+            this.renderForm(selectedForm, displayForm);
         });
     }
 
     clone(container) {
         let id = this.url.vars.id;
         system.get({ collection: 'forms', query: { _id: id }, changeQuery: { _id: 'objectid' } }).then(result => {
-            let type = result.contents.type;
-            system.get({ collection: 'customforms', query: { _id: type }, changeQuery: { _id: 'objectid' } }).then(selectedForm => {
-                let displayForm = (contents, tasks) => {
-                    for (let i = 0; i < selectedForm.contents.length; i++) {
+            let selectedForm = result.selectedForm;
+            let displayForm = (contents, tasks) => {
+                for (let i = 0; i < selectedForm.contents.length; i++) {
+                    if (kerdx.isset(contents[selectedForm.contents[i].name].params)) {
+                        contents[selectedForm.contents[i].name].params.attributes.value = result.contents[selectedForm.contents[i].name];
+                    }
+                    else {
                         contents[selectedForm.contents[i].name].attributes.value = result.contents[selectedForm.contents[i].name];
                     }
+                }
 
-                    let cloneForm = kerdx.createForm({
-                        title: 'Clone ' + selectedForm.title, attributes: { enctype: 'multipart/form-data', id: 'clone-form-form', class: 'form', 'data-type': selectedForm._id, 'data-target': selectedForm.target, style: { border: '1px solid var(--secondary-color)', maxWidth: '100%' } },
-                        contents: contents,
-                        buttons: {
-                            tasks: {
-                                element: 'div', attributes: { id: 'tasks-container' }
-                            },
-                            actions: {
-                                element: 'div', attributes: { id: 'single-form-actions-container' }, children: [
-                                    { element: 'i', attributes: { class: 'action', id: 'add-new-task', title: 'Add New Task', 'data-icon': kerdx.icons.plus } },
-                                ]
-                            },
-                            submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Clone', state: { name: 'submit', owner: '#clone-form-form' } },
+                let cloneForm = kerdx.createForm({
+                    title: 'Clone ' + selectedForm.title, attributes: { enctype: 'multipart/form-data', id: 'clone-form-form', class: 'form', 'data-type': selectedForm._id, 'data-target': selectedForm.target, style: { border: '1px solid var(--secondary-color)', maxWidth: '100%' } },
+                    contents: contents,
+                    buttons: {
+                        tasks: {
+                            element: 'div', attributes: { id: 'tasks-container' }
                         },
-                        columns: 2
-                    });
+                        actions: {
+                            element: 'div', attributes: { id: 'single-form-actions-container' }, children: [
+                                { element: 'i', attributes: { class: 'action', id: 'add-new-task', title: 'Add New Task', 'data-icon': kerdx.icons.plus } },
+                            ]
+                        },
+                        submit: { element: 'button', attributes: { id: 'submit', class: 'btn btn-small' }, text: 'Clone', state: { name: 'submit', owner: '#clone-form-form' } },
+                    },
+                    columns: 2
+                });
 
-                    container.render(cloneForm);
-                    this.make(cloneForm, tasks);
-                };
+                container.render(cloneForm);
+                this.make(cloneForm, tasks, selectedForm);
+            };
 
-                this.renderForm(selectedForm, displayForm);
-            });
+            this.renderForm(selectedForm, displayForm);
         });
     }
 
@@ -443,6 +459,10 @@ class Forms {
             customForms: system.get({ collection: 'customforms', query: {}, many: true })
         }, result => {
             let customForms = result.customForms;
+            if (customForms.length <= 0) {
+                system.notify({ note: `No customizable forms found. Create now`, link: 'settings.html?page=forms' });
+                return;
+            }
             let types = kerdx.object.valueOfObjectArray(customForms, 'name');
             let selectCell = kerdx.cell({ element: 'select', name: 'Form', dataAttributes: {}, options: types });
 
@@ -471,7 +491,7 @@ class Forms {
                 });
 
                 container.render(createForm);
-                this.make(createForm, tasks);
+                this.make(createForm, tasks, selectedForm);
             }
 
             this.renderForm(selectedForm, displayForm);
@@ -518,7 +538,7 @@ class Forms {
 
         for (let i = 0; i < selectedForm.contents.length; i++) {
             if (selectedForm.contents[i].source != '') {
-                contents[selectedForm.contents[i].name] = { perceptorElement: 'createSelect', params: { attributes: {} }, source: selectedForm.contents[i].source, name: selectedForm.contents[i].name, 'data-action': selectedForm.contents[i].action };
+                contents[selectedForm.contents[i].name] = { perceptorElement: 'createSelect', params: { attributes: { name: selectedForm.contents[i].name } }, source: selectedForm.contents[i].source, name: selectedForm.contents[i].name, 'data-action': selectedForm.contents[i].action };
             }
             else {
                 contents[selectedForm.contents[i].name] = { element: 'input', attributes: { type: selectedForm.contents[i].type, name: selectedForm.contents[i].name, 'data-action': selectedForm.contents[i].action } };

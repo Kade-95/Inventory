@@ -85,7 +85,7 @@ let reportGenerators = (mainBody) => {
     };
 
     let cloneData = (data, callback) => {
-        let editDataForm = kerdx.createForm({
+        let cloneDataForm = kerdx.createForm({
             title: 'Clone Data', attributes: { enctype: 'multipart/form-data', id: 'create-clone-data-form', class: 'form' },
             contents: {
                 name: { element: 'input', attributes: { id: 'name', name: 'name', value: data.name } },
@@ -99,7 +99,7 @@ let reportGenerators = (mainBody) => {
             }, columns: 2
         });
 
-        makeData(editDataForm, callback);
+        makeData(cloneDataForm, callback);
     };
 
     let createData = (callback) => {
@@ -130,6 +130,7 @@ let reportGenerators = (mainBody) => {
         }
         getGraphsDuration(data.contents, durationed => {//set the durations
             data.contents = durationed;
+            
             system.getSources(data.contents, fetched => {
                 let report = kerdx.createElement({
                     element: 'div', attributes: {
@@ -229,8 +230,15 @@ let reportGenerators = (mainBody) => {
     }
 
     let getGraphsDuration = (contents, callback) => {
+        let toLabel = kerdx.array.findAll(contents, con => {
+            return con.display.includes('Graph') || con.display.includes('Chart');
+        }).length;
+        if(toLabel == 0){
+            callback(contents);
+            return;
+        }
         let details = kerdx.createElement({ element: 'div', attributes: { class: 'graph-details' } });
-
+    
         for (let con of contents) {
             if (con.display.includes('Graph') || con.display.includes('Chart')) {
                 let single = details.makeElement({
@@ -286,6 +294,14 @@ let reportGenerators = (mainBody) => {
     }
 
     let getGraphsLabels = (contents, callback) => {
+        let toLabel = kerdx.array.findAll(contents, con => {
+            return con.display.includes('Graph') || con.display.includes('Chart');
+        }).length;
+        if(toLabel == 0){
+            callback(contents);
+            return;
+        }
+        
         let details = kerdx.createElement({ element: 'div', attributes: { class: 'graph-details' } });
 
         for (let con of contents) {
@@ -505,7 +521,7 @@ let reportGenerators = (mainBody) => {
             }
             else if (target.classList.contains('edit-data')) {
                 editData(target.getParents('.single-form-data').value, data => {
-                    target.getParents('.single-form-data').find('#readabledata').innerHTML = getReadable(data, 'data');
+                    target.getParents('.single-form-data').find('#readabledata').innerHTML = getReadable(data, 'data').innerHTML;
                     target.getParents('.single-form-data').value = data;
                 });
             }

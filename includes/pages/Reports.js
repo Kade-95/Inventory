@@ -50,7 +50,9 @@ class Reports {
             for (let report of result.reports) {
                 report.timeCreated = kerdx.time_date(report.timeCreated);
                 report.lastModified = kerdx.time_date(report.lastModified);;
-
+                if (!types.includes(report.content.name)) {
+                    types.push(report.content.name);
+                }
                 run[report.author] = system.get({ collection: 'users', query: { _id: report.author }, options: { projection: { userName: 1, _id: 0 } }, changeQuery: { _id: 'objectid' } });
             }
 
@@ -64,14 +66,26 @@ class Reports {
             document.body.find('#main-container-body-main-actions-others').append(selectCell);
 
             let renderTable = value => {
-                let id = kerdx.array.find(result.reportGenerators, generator => {
-                    return generator.name == value;
-                })._id;
+                let id;
+                if(result.reportGenerators.length > 0){
+                    id = kerdx.array.find(result.reportGenerators, generator => {
+                        return generator.name == value;
+                    })._id;
+                }
+                else{
+                    id = kerdx.array.find(result.reports, report => {
+                        return report.content.name == value;
+                    }).content._id;
+                }
 
                 let contents = kerdx.array.findAll(result.reports, report => {
                     return report.content._id == id;
                 });
 
+                drawTable(contents, value);
+            };
+
+            let drawTable = (contents, value) => {
                 let reportsTable = kerdx.createTable({ title: value + ' Reports Table', contents, search: true, sort: true, projection: { content: -1 } });
                 container.render(reportsTable);
 
@@ -116,14 +130,18 @@ class Reports {
                         return hide;
                     }
                 });
-            };
+            }
 
             kerdx.runParallel(run, authors => {
                 for (let report of result.reports) {
                     report.author = authors[report.author].userName;
                 }
-
-                renderTable(types[0])
+                if (types.length > 0) {
+                    renderTable(types[0])
+                }
+                else {
+                    drawTable(result.reports, 'All');
+                }
                 selectCell.find('#Report-cell').onChanged(value => {
                     renderTable(value);
                 });
@@ -218,7 +236,7 @@ class Reports {
             this.renderReport(result.content, displayReport);
 
             saveReport.addEventListener('click', event => {
-                this.make(saveReport.data, id);
+                this.make(saveReport.data);
             });
         });
     }
@@ -228,6 +246,11 @@ class Reports {
             reportGenerators: system.get({ collection: 'reportgenerators', query: {}, many: true })
         }, result => {
             let reportGenerators = result.reportGenerators;
+            if (reportGenerators.length <= 0) {
+                system.notify({ note: `No generators found. Create now`, link: 'settings.html?page=reportGenerators' });
+                return;
+            }
+
             let types = kerdx.object.valueOfObjectArray(reportGenerators, 'name');
             let selectCell = kerdx.cell({ element: 'select', name: 'Report', dataAttributes: {}, options: types });
             let saveReport = kerdx.createElement({ element: 'button', attributes: { id: 'save-report', class: 'btn btn-medium', style: { display: 'none' } }, text: 'Save Report' });
@@ -368,6 +391,13 @@ class Reports {
     }
 
     getGraphsDuration(contents, callback) {
+        let toLabel = kerdx.array.findAll(contents, con => {
+            return con.display.includes('Graph') || con.display.includes('Chart');
+        }).length;
+        if(toLabel == 0){
+            callback(contents);
+            return;
+        }
         let details = kerdx.createElement({ element: 'div', attributes: { class: 'graph-details' } });
 
         for (let con of contents) {
@@ -432,6 +462,13 @@ class Reports {
     }
 
     getGraphsLabels(contents, callback) {
+        let toLabel = kerdx.array.findAll(contents, con => {
+            return con.display.includes('Graph') || con.display.includes('Chart');
+        }).length;
+        if(toLabel == 0){
+            callback(contents);
+            return;
+        }
         let details = kerdx.createElement({ element: 'div', attributes: { class: 'graph-details' } });
 
         for (let con of contents) {

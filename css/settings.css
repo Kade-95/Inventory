@@ -5,11 +5,13 @@
     grid-template-columns: repeat(7, max-content);
     border-top: 1px solid rgba(128, 128, 128, 0.5);;
     border-bottom: 1px solid rgba(128, 128, 128, 0.5);
+    position: relative;
 }
 
 .settings-menu-link{
     text-transform: uppercase;
     color: var(--light-secondary-color);
+    position: relative;
 }
 
 .settings-menu-link.active, .settings-menu-link:hover{

@@ -1190,7 +1190,7 @@ system.getSources = (data, callback) => {
             filter = source.filter;
             duration = kerdx.array.find(data, d => {
                 return d.name == contentName;
-            }).duration;
+            }).duration || {};
 
             if (!kerdx.isset(item)) {
                 if (kerdx.isset(name)) {
@@ -1223,7 +1223,7 @@ system.getSources = (data, callback) => {
     });
 }
 
-system.runFilters = (contents, filters, duration) => {
+system.runFilters = (contents, filters, duration = {}) => {
     let filterData, action, start, end, moment;
 
     let run = {

@@ -90,7 +90,7 @@
     color: var(--primary-color);
 }
 
-.panel-link:hover {
+.panel-link:hover, .panel-link.active {
     background-color: rgba(0, 255, 229, 0.1);
     color: var(--accient-color);
 }

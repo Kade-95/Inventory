@@ -1,4 +1,4 @@
-const { ObjectID, ObjectId } = require("mongodb");
+const { ObjectId, Db } = require("mongodb");
 
 class PostHandler {
     constructor() {
@@ -28,7 +28,7 @@ class PostHandler {
             return
             if (this.adminOnly.includes(action)) {
                 let user = global.sessions[req.sessionId].user;
-                db.find({ collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, projection: { userType: 1 } }).then(result => {
+                global.sessions[req.sessionId].db.find({ collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, projection: { userType: 1 } }).then(result => {
 
                     if (result.userType == 'Admin') {
                         deliver();
@@ -46,7 +46,7 @@ class PostHandler {
         }
     }
 
-    ifNotExist(params) {
+    ifNotExist(req, params) {
         if (params.action == 'insert') {
             params.query.timeCreated = new Date().getTime();
             params.query.lastModified = new Date().getTime();
@@ -57,7 +57,7 @@ class PostHandler {
         return new Promise(async (resolve, reject) => {
             let data, found;
             for (let i = 0; i < params.check.length; i++) {
-                data = await db.find({ collection: params.collection, query: params.check[i], many: true });
+                data = await global.sessions[req.sessionId].db.find({ collection: params.collection, query: params.check[i], many: true });
                 data = kerds.array.find(data, d => {
                     return d.recycled != true;
                 });
@@ -70,7 +70,7 @@ class PostHandler {
                 }
             }
             if (!found) {
-                db[params.action](params).then(worked => {
+                global.sessions[req.sessionId].db[params.action](params).then(worked => {
                     resolve(worked);
                 }).catch(error => {
                     reject(error)
@@ -79,7 +79,7 @@ class PostHandler {
         });
     }
 
-    ifIExist(params) {
+    ifIExist(req, params) {
         if (params.action == 'update') {
             if (kerds.isset(params.option)) {
                 if (kerds.isset(params.options['$set'])) {
@@ -94,50 +94,50 @@ class PostHandler {
             }
         }
 
-        return db.ifIExist(params);
+        return global.sessions[req.sessionId].db.ifIExist(params);
     }
 
-    insert(params) {
+    insert(req, params) {
         params.query.timeCreated = new Date().getTime();
         params.query.lastModified = new Date().getTime();
 
-        return db.insert(params);
+        return global.sessions[req.sessionId].db.insert(params);
     }
 
-    set(params) {
+    set(req, params) {
         params.options['$set'].lastModified = new Date().getTime();
 
-        return db.update(params);
+        return global.sessions[req.sessionId].db.update(params);
     }
 
-    pull(params) {
-        return db.update(params);
+    pull(req, params) {
+        return global.sessions[req.sessionId].db.update(params);
     }
 
-    push(params) {
-        return db.update(params);
+    push(req, params) {
+        return global.sessions[req.sessionId].db.update(params);
     }
 
-    update(params) {
+    update(req, params) {
         params.options['$set'] = params.options['$set'] || { lastModified: new Date().getTime() };
 
-        return db.update(params);
+        return global.sessions[req.sessionId].db.update(params);
     }
 
     removeFromRecycleBin(req, res, data) {
-        db.delete({ collection: data.collection, query: { _id: new ObjectId(data.id) } }).then(result => {
+        global.sessions[req.sessionId].db.delete({ collection: data.collection, query: { _id: new ObjectId(data.id) } }).then(result => {
             this.respond(req, res, result.result.ok == 1);
             this.makeHistory(req, result.result.ok == 1, { action: 'Removed From Recycle Bin', data, collection: data.collection, item: data.id });
         })
     }
 
-    recycle(params) {
+    recycle(req, params) {
         params.options = { $set: { recycled: true, timeDeleted: new Date().getTime() } };
-        return db.update(params);
+        return global.sessions[req.sessionId].db.update(params);
     }
 
     revert(req, res, data) {
-        this.update({ collection: data.collection, query: { _id: new ObjectId(data.id) }, options: { $set: { recycled: false, timeReverted: new Date().getTime() } } }).then(result => {
+        this.update(req, { collection: data.collection, query: { _id: new ObjectId(data.id) }, options: { $set: { recycled: false, timeReverted: new Date().getTime() } } }).then(result => {
             this.respond(req, res, (result == 1));
             this.makeHistory(req, result == 1, { action: `Reverted`, data, collection: data.collection, item: data.id });
         });
@@ -145,15 +145,15 @@ class PostHandler {
 
     emptyRecycleBin(req, res, data) {
         kerds.runParallel({
-            items: db.delete({ collection: 'items', query: { recycled: true }, many: true }),
-            categories: db.delete({ collection: 'categories', query: { recycled: true }, many: true }),
-            tags: db.delete({ collection: 'tags', query: { recycled: true }, many: true }),
-            users: db.delete({ collection: 'users', query: { recycled: true }, many: true }),
-            lists: db.delete({ collection: 'lists', query: { recycled: true }, many: true }),
-            forms: db.delete({ collection: 'forms', query: { recycled: true }, many: true }),
-            reports: db.delete({ collection: 'reports', query: { recycled: true }, many: true }),
-            customforms: db.delete({ collection: 'customforms', query: { recycled: true }, many: true }),
-            reportgenerators: db.delete({ collection: 'reportgenerators', query: { recycled: true }, many: true }),
+            items: global.sessions[req.sessionId].db.delete({ collection: 'items', query: { recycled: true }, many: true }),
+            categories: global.sessions[req.sessionId].db.delete({ collection: 'categories', query: { recycled: true }, many: true }),
+            tags: global.sessions[req.sessionId].db.delete({ collection: 'tags', query: { recycled: true }, many: true }),
+            users: global.sessions[req.sessionId].db.delete({ collection: 'users', query: { recycled: true }, many: true }),
+            lists: global.sessions[req.sessionId].db.delete({ collection: 'lists', query: { recycled: true }, many: true }),
+            forms: global.sessions[req.sessionId].db.delete({ collection: 'forms', query: { recycled: true }, many: true }),
+            reports: global.sessions[req.sessionId].db.delete({ collection: 'reports', query: { recycled: true }, many: true }),
+            customforms: global.sessions[req.sessionId].db.delete({ collection: 'customforms', query: { recycled: true }, many: true }),
+            reportgenerators: global.sessions[req.sessionId].db.delete({ collection: 'reportgenerators', query: { recycled: true }, many: true }),
         }, result => {
             this.respond(req, res, true);
             this.makeHistory(req, true, { action: 'Empty Recycle Bin', data, item: 'System' });
@@ -162,15 +162,15 @@ class PostHandler {
 
     createAccount(req, res, data) {
         data.account = `${data.account}#onInventory`;
-        this.ifNotExist({ collection: 'accounts', query: { name: data.account }, check: [{ name: data.account }], action: 'insert' }).then(inserted => {
+        this.ifNotExist(req, { collection: 'accounts', query: { name: data.account }, check: [{ name: data.account }], action: 'insert' }).then(inserted => {
             if (inserted == 1) {
-                db.setName(data.account);//set database name
-                db.erase().then(erased => {//erase database
+                global.sessions[req.sessionId].db.setName(data.account);//set database name
+                global.sessions[req.sessionId].db.erase().then(erased => {//erase database
                     if (erased) {
-                        global.setUpAccount(data, user => {
-                            
+                        this.setUpAccount(req, data, user => {
+
                             this.makeHistory(req, kerds.isset(user), { action: 'User Creation', data, collection: 'users', item: user._id.toString() });
-                            this.notify({ title: 'Welcome Note', note: 'Your system has been setup, Enjoy', users: [user._id.toString()] });
+                            this.notify(req, { title: 'Welcome Note', note: 'Your system has been setup, Enjoy', users: [user._id.toString()] });
 
                             global.sessions[req.sessionId].set({ user: ObjectId(user._id).toString(), active: true, account: data.account });
 
@@ -189,11 +189,21 @@ class PostHandler {
         });
     }
 
+    setUpAccount (req, data, callback){
+        bcrypt.hash(data.password, 10).then(hash => {
+            global.sessions[req.sessionId].db.insert({ collection: 'users', query: { userName: data.admin, currentPassword: hash, userType: 'Admin' }, getInserted: true }).then(user => {
+                global.sessions[req.sessionId].db.createCollection('lists');
+                callback(user[0]);
+            });
+        });
+    }
+
     login(req, res, data) {
         let [userName, account] = data.email.split('@');
         account = account.slice(0, account.lastIndexOf('.')).replace('.', '#');
-        
-        db.find({ collection: 'users', query: { userName: userName }, projection: { currentPassword: 1, userType: 1, fullName: 1, userImage: 1 } }).then(result => {
+        global.sessions[req.sessionId].db.name = account;
+        console.log(account, userName);
+        global.sessions[req.sessionId].db.find({ collection: 'users', query: { userName: userName }, projection: { currentPassword: 1, userType: 1, fullName: 1, userImage: 1 } }).then(result => {
             if (!kerds.isnull(result)) {
                 bcrypt.compare(data.currentPassword, result.currentPassword).then(valid => {
                     if (valid) {
@@ -215,7 +225,7 @@ class PostHandler {
         if (flag) {
             event.timeCreated = new Date().getTime();
             event.by = global.sessions[req.sessionId].user;
-            db.insert({ collection: 'history', query: event });
+            global.sessions[req.sessionId].db.insert({ collection: 'history', query: event });
         }
     }
 
@@ -223,19 +233,19 @@ class PostHandler {
         bcrypt.hash(data.currentPassword, 10).then(hash => {
             data.currentPassword = hash;
 
-            this.ifNotExist({ collection: 'users', query: data, check: [{ userName: data.userName }, { email: data.email }], action: 'insert', getInserted: true }).then(result => {
+            this.ifNotExist(req, { collection: 'users', query: data, check: [{ userName: data.userName }, { email: data.email }], action: 'insert', getInserted: true }).then(result => {
 
                 if (!kerds.isset(result.found)) {
                     this.respond(req, res, kerds.isset(result[0]));
                     this.makeHistory(req, kerds.isset(result[0]), { action: 'User Creation', data, collection: 'users', item: result[0]._id.toString() });
                     if (data.userType == 'Admin') {
-                        this.notify({ title: 'User type Change', note: 'You are now an Admin', users: [result[0]._id.toString()] });
+                        this.notify(req, { title: 'User type Change', note: 'You are now an Admin', users: [result[0]._id.toString()] });
 
-                        db.find({ collection: 'users', query: { userType: 'Admin' }, projection: { _id: 1 }, many: true }).then(admins => {
+                        global.sessions[req.sessionId].db.find({ collection: 'users', query: { userType: 'Admin' }, projection: { _id: 1 }, many: true }).then(admins => {
                             admins = kerds.array.each(admins, a => {
                                 return a._id.toString();
                             });
-                            this.notify({ title: 'Admin Created', note: 'A new admin has been added to the system.', link: `users.html?page=showUser&id=${result[0]._id.toString()}`, users: admins });
+                            this.notify(req, { title: 'Admin Created', note: 'A new admin has been added to the system.', link: `users.html?page=showUser&id=${result[0]._id.toString()}`, users: admins });
                         });
                     }
                 }
@@ -247,51 +257,52 @@ class PostHandler {
     }
 
     makeAdmin(req, res, data) {
-        this.set({ collection: 'users', query: { _id: ObjectId(data.user) }, options: { '$set': { userType: 'Admin' } } }).then(result => {
+        this.set(req, { collection: 'users', query: { _id: ObjectId(data.user) }, options: { '$set': { userType: 'Admin' } } }).then(result => {
             this.respond(req, res, result == 1);
             data.by = global.sessions[req.sessionId].user;
             this.makeHistory(req, result == 1, { action: 'Become Admin', data, collection: 'users', item: data.user });
 
-            this.notify({ title: 'User type Change', note: 'You are now an Admin', users: [data.user] });
+            this.notify(req, { title: 'User type Change', note: 'You are now an Admin', users: [data.user] });
 
-            db.find({ collection: 'users', query: { userType: 'Admin' }, projection: { _id: 1 }, many: true }).then(admins => {
+            global.sessions[req.sessionId].db.find({ collection: 'users', query: { userType: 'Admin' }, projection: { _id: 1 }, many: true }).then(admins => {
                 admins = kerds.array.each(admins, a => {
                     return a._id.toString();
                 });
 
-                this.notify({ title: 'Admin Created', note: 'A new admin has been added to the system.', link: `users.html?page=showUser&id=${data.user}`, users: admins });
+                this.notify(req, { title: 'Admin Created', note: 'A new admin has been added to the system.', link: `users.html?page=showUser&id=${data.user}`, users: admins });
             });
         });
     }
 
     makeStaff(req, res, data) {
-        this.set({ collection: 'users', query: { _id: ObjectId(data.user) }, options: { '$set': { userType: 'Staff' } } }).then(result => {
+        this.set(req, { collection: 'users', query: { _id: ObjectId(data.user) }, options: { '$set': { userType: 'Staff' } } }).then(result => {
             this.respond(req, res, result == 1);
             data.by = global.sessions[req.sessionId].user;
             this.makeHistory(req, result == 1, { action: 'Become Staff', data, collection: 'users', item: data.user });
 
             if (result == 1) {
-                this.notify({ title: 'User type Change', note: 'You are no longer an Admin', users: [data.user] });
+                this.notify(req, { title: 'User type Change', note: 'You are no longer an Admin', users: [data.user] });
 
-                db.find({ collection: 'users', query: { userType: 'Admin' }, projection: { _id: 1 }, many: true }).then(admins => {
+                global.sessions[req.sessionId].db.find({ collection: 'users', query: { userType: 'Admin' }, projection: { _id: 1 }, many: true }).then(admins => {
                     admins = kerds.array.each(admins, a => {
                         return a._id.toString();
                     });
 
-                    this.notify({ title: 'Admin Removal', note: 'An admin has been removed from the system system.', link: '', users: admins });
+                    this.notify(req, { title: 'Admin Removal', note: 'An admin has been removed from the system system.', link: '', users: admins });
                 });
             }
         });
     }
 
-    teachUser(req, res, data) {
-        this.update({ collection: 'users', query: { _id: new ObjectId(data.id), options: { $set: { taughtUser: true } } } }).then(result => {
+    tourUser(req, res, data) {
+        data.user = global.sessions[req.sessionId].user;
+        this.set(req, { collection: 'users', query: { _id: ObjectId(data.user) }, options: { '$set': { toured: true } } }).then(result => {
             this.respond(req, res, result == 1);
         });
     }
 
     deleteUser(req, res, data) {
-        this.recycle({ collection: 'users', query: { _id: ObjectId(data.user) } }).then(result => {
+        this.recycle(req, { collection: 'users', query: { _id: ObjectId(data.user) } }).then(result => {
             this.respond(req, res, (result == 1));
             this.makeHistory(req, result == 1, { action: 'Delete User', data, collection: 'users', item: data.user });
         });
@@ -340,7 +351,7 @@ class PostHandler {
             this.respond(req, res, 'actioned');
         }
         else {
-            db.find(params).then(result => {
+            global.sessions[req.sessionId].db.find(params).then(result => {
                 this.respond(req, res, prepareResult(result));
             });
         }
@@ -461,7 +472,7 @@ class PostHandler {
 
         let uploadImage = () => {
             fs.writeFile(userImage, data.newImage.value, c => {
-                this.set({ collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, options: { '$set': { userImage: userImage } } }).then(result => {
+                this.set(req, { collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, options: { '$set': { userImage: userImage } } }).then(result => {
                     this.respond(req, res, result == 1);
 
                     this.makeHistory(req, result == 1, { action: 'Change Profile Picture', data, collection: 'users', item: global.sessions[req.sessionId].user });
@@ -483,7 +494,7 @@ class PostHandler {
     }
 
     deleteDp(req, res, data) {
-        this.set({ collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, options: { '$set': { userImage: null } } }).then(result => {
+        this.set(req, { collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, options: { '$set': { userImage: null } } }).then(result => {
             kerds.deleteRecursive(`./users/${global.sessions[req.sessionId].user}/dp.png`, () => {
                 this.respond(req, res, result == 1);
                 this.makeHistory(req, result == 1, { action: 'Delete Profile Picture', data, collection: 'users', item: global.sessions[req.sessionId].user });
@@ -493,7 +504,7 @@ class PostHandler {
 
     editProfile(req, res, data) {
         data.lastModified = new Date().getTime();
-        this.set({ collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, options: { '$set': data } }).then(result => {
+        this.set(req, { collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, options: { '$set': data } }).then(result => {
             this.respond(req, res, result == 1);
             this.makeHistory(req, result == 1, { action: 'Edit Profile', data, collection: 'users', item: global.sessions[req.sessionId].user });
         });
@@ -503,20 +514,20 @@ class PostHandler {
         let id = data._id;
         delete data._id;
         data.lastModified = new Date().getTime();
-        this.set({ collection: 'users', query: { _id: new ObjectId(id) }, options: { '$set': data } }).then(result => {
+        this.set(req, { collection: 'users', query: { _id: new ObjectId(id) }, options: { '$set': data } }).then(result => {
             this.respond(req, res, result == 1);
             this.makeHistory(req, result == 1, { action: 'Edit User', data, item: 'users', item: id });
         });
     }
 
     changePassword(req, res, data) {
-        db.find({ collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, projection: { currentPassword: 1 } }).then(result => {
+        global.sessions[req.sessionId].db.find({ collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, projection: { currentPassword: 1 } }).then(result => {
             if (!kerds.isnull(result)) {
                 bcrypt.compare(data.currentPassword, result.currentPassword).then(valid => {
                     if (valid) {
                         bcrypt.hash(data.newPassword, 10).then(hash => {
                             data.newPassword = hash;
-                            this.set({ collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, options: { '$set': { currentPassword: data.newPassword } } }).then(changed => {
+                            this.set(req, { collection: 'users', query: { _id: new ObjectId(global.sessions[req.sessionId].user) }, options: { '$set': { currentPassword: data.newPassword } } }).then(changed => {
                                 this.respond(req, res, true);
                                 this.makeHistory(req, true, { action: 'Change Password', data, collection: 'users', item: global.sessions[req.sessionId].user });
                             });
@@ -542,7 +553,7 @@ class PostHandler {
         for (let i of data.newCats) {
             let name = i.trim();
             if (name != '') {
-                run[i] = this.ifNotExist({ collection: 'categories', query: { name, parents: '', image: '' }, check: [{ name }], action: 'insert', getInserted: true });
+                run[i] = this.ifNotExist(req, { collection: 'categories', query: { name, parents: '', image: '' }, check: [{ name }], action: 'insert', getInserted: true });
             }
         }
 
@@ -563,7 +574,7 @@ class PostHandler {
             }
 
             data.parents = data.parents.join(',');
-            this.ifNotExist({ collection: 'categories', query: { name: data.name, parents: data.parents }, check: [{ name: data.name }], action: 'insert', getInserted: true }).then(result => {
+            this.ifNotExist(req, { collection: 'categories', query: { name: data.name, parents: data.parents }, check: [{ name: data.name }], action: 'insert', getInserted: true }).then(result => {
 
                 if (kerds.isset(result.found)) {
                     this.respond(req, res, result);
@@ -574,7 +585,7 @@ class PostHandler {
 
                     let uploadImage = () => {
                         fs.writeFile(image, data.image.value, c => {
-                            db.update({ collection: 'categories', query: { _id: new ObjectId(result[0]._id) }, options: { '$set': { image } } }).then(uploaded => {
+                            global.sessions[req.sessionId].db.update({ collection: 'categories', query: { _id: new ObjectId(result[0]._id) }, options: { '$set': { image } } }).then(uploaded => {
                                 this.respond(req, res, uploaded == 1);
                                 this.makeHistory(req, uploaded == 1, { action: 'Create Category', data, collection: 'categories', item: result[0]._id });
                             });
@@ -601,10 +612,10 @@ class PostHandler {
     }
 
     deleteCategory(req, res, data) {
-        this.recycle({ collection: 'categories', query: { _id: new ObjectId(data.id) } }).then(result => {
+        this.recycle(req, { collection: 'categories', query: { _id: new ObjectId(data.id) } }).then(result => {
             this.respond(req, res, result == 1);
             this.makeHistory(req, result == 1, { action: 'Delete Category', data, collection: 'categories', item: data.id });
-            // db.find({ collection: 'categories', query: {}, many: true, projection: { parents: 1 } }).then(categories => {
+            // global.sessions[req.sessionId].db.find({ collection: 'categories', query: {}, many: true, projection: { parents: 1 } }).then(categories => {
             //     for (let category of categories) {
             //         if (category.parents.includes(data.id)) {
             //             let newParents = [];
@@ -612,7 +623,7 @@ class PostHandler {
             //                 if (parent != data.id) newParents.push(parent);
             //             }
 
-            //             db.update({ collection: 'categories', query: { _id: new ObjectId(category._id) }, options: { '$set': { parents: newParents.join(',') } } });
+            //             global.sessions[req.sessionId].db.update({ collection: 'categories', query: { _id: new ObjectId(category._id) }, options: { '$set': { parents: newParents.join(',') } } });
             //         }
             //     }
             // })
@@ -620,7 +631,7 @@ class PostHandler {
     }
 
     deleteCategoryImage(req, res, data) {
-        this.set({ collection: 'categories', query: { _id: new ObjectId(data.id) }, options: { '$set': { image: null } } }).then(result => {
+        this.set(req, { collection: 'categories', query: { _id: new ObjectId(data.id) }, options: { '$set': { image: null } } }).then(result => {
             kerds.deleteRecursive(`./categories/${data.id}/image.png`, () => {
                 this.respond(req, res, result == 1);
                 this.makeHistory(req, result == 1, { action: 'Delete Category Image', data, collection: 'categories', item: data.id });
@@ -634,7 +645,7 @@ class PostHandler {
 
         let uploadImage = () => {
             fs.writeFile(image, data.newImage.value, c => {
-                this.set({ collection: 'categories', query: { _id: new ObjectId(data.id) }, options: { '$set': { image } } }).then(result => {
+                this.set(req, { collection: 'categories', query: { _id: new ObjectId(data.id) }, options: { '$set': { image } } }).then(result => {
                     this.respond(req, res, result == 1);
                     this.makeHistory(req, result == 1, { action: 'Change Category Image', data, collection: 'cateogories', item: data.id });
 
@@ -665,7 +676,7 @@ class PostHandler {
         for (let i of data.newCats) {
             let name = i.trim();
             if (name != '') {
-                run[i] = this.ifNotExist({ collection: 'categories', query: { name, parents: '', image: '' }, check: [{ name }], action: 'insert', getInserted: true });
+                run[i] = this.ifNotExist(req, { collection: 'categories', query: { name, parents: '', image: '' }, check: [{ name }], action: 'insert', getInserted: true });
             }
         }
 
@@ -686,7 +697,7 @@ class PostHandler {
 
             delete data.newCats;
             data.parents = data.parents.join(',');
-            this.ifIExist({ collection: 'categories', query: { _id: new ObjectId(_id) }, options: { '$set': data }, action: 'update', check: [{ query: { name: data.name }, against: { _id } }] }).then(result => {
+            this.ifIExist(req, { collection: 'categories', query: { _id: new ObjectId(_id) }, options: { '$set': data }, action: 'update', check: [{ query: { name: data.name }, against: { _id } }] }).then(result => {
                 this.respond(req, res, result);
                 this.makeHistory(req, result == 1, { action: 'Edit Category', dat, collection: 'categories', item: _id });
             });
@@ -694,7 +705,7 @@ class PostHandler {
     }
 
     createTag(req, res, data) {
-        this.ifNotExist({ collection: 'tags', query: { name: data.name }, check: [{ name: data.name }], action: 'insert', getInserted: true }).then(result => {
+        this.ifNotExist(req, { collection: 'tags', query: { name: data.name }, check: [{ name: data.name }], action: 'insert', getInserted: true }).then(result => {
             if (kerds.isset(result.found)) {
                 this.respond(req, res, result);
             }
@@ -704,7 +715,7 @@ class PostHandler {
 
                 let uploadImage = () => {
                     fs.writeFile(image, data.image.value, c => {
-                        db.update({ collection: 'tags', query: { _id: new ObjectId(result[0]._id) }, options: { '$set': { image } } }).then(updated => {
+                        global.sessions[req.sessionId].db.update({ collection: 'tags', query: { _id: new ObjectId(result[0]._id) }, options: { '$set': { image } } }).then(updated => {
                             this.respond(req, res, updated == 1);
                             this.makeHistory(req, updated == 1, { action: 'Create Tag', data, collection: 'tags', item: result[0]._id });
                         });
@@ -729,7 +740,7 @@ class PostHandler {
     }
 
     deleteTagImage(req, res, data) {
-        db.update({ collection: 'tags', query: { _id: new ObjectId(data.id) }, options: { '$set': { image: null } } }).then(result => {
+        global.sessions[req.sessionId].db.update({ collection: 'tags', query: { _id: new ObjectId(data.id) }, options: { '$set': { image: null } } }).then(result => {
             kerds.deleteRecursive(`./tags/${data.id}/image.png`, () => {
                 this.respond(req, res, result == 1);
                 this.makeHistory(req, result == 1, { action: 'Delete Tag Image', data, collection: 'tags', item: data.id });
@@ -743,7 +754,7 @@ class PostHandler {
 
         let uploadImage = () => {
             fs.writeFile(image, data.newImage.value, c => {
-                db.update({ collection: 'tags', query: { _id: new ObjectId(data.id) }, options: { '$set': { image } } }).then(result => {
+                global.sessions[req.sessionId].db.update({ collection: 'tags', query: { _id: new ObjectId(data.id) }, options: { '$set': { image } } }).then(result => {
                     this.respond(req, res, result == 1);
                     this.makeHistory(req, result == 1, { action: 'Change Tag Image', data, collection: 'tags', item: data.id });
                 });
@@ -763,7 +774,7 @@ class PostHandler {
     }
 
     deleteTag(req, res, data) {
-        this.recycle({ collection: 'tags', query: { _id: new ObjectId(data.id) } }).then(result => {
+        this.recycle(req, { collection: 'tags', query: { _id: new ObjectId(data.id) } }).then(result => {
             this.respond(req, res, result == 1);
             this.makeHistory(req, result == 1, { action: 'Delete Tag', data, collection: 'tags', item: data.id });
         });
@@ -772,7 +783,7 @@ class PostHandler {
     editTag(req, res, data) {
         let _id = data.id;
         delete data.id;
-        this.ifIExist({ collection: 'tags', query: { _id: new ObjectId(_id) }, options: { '$set': data }, action: 'update', check: [{ query: { name: data.name }, against: { _id } }] }).then(result => {
+        this.ifIExist(req, { collection: 'tags', query: { _id: new ObjectId(_id) }, options: { '$set': data }, action: 'update', check: [{ query: { name: data.name }, against: { _id } }] }).then(result => {
             this.respond(req, res, result);
             this.makeHistory(req, result == 1, { action: 'Edit Tag', data, collection: 'tags', item: _id });
 
@@ -788,7 +799,7 @@ class PostHandler {
         for (let i of data.newCats) {
             let name = i.trim();
             if (name != '') {
-                runCats[i] = this.ifNotExist({ collection: 'categories', query: { name, parents: '', image: '' }, check: [{ name }], action: 'insert', getInserted: true });
+                runCats[i] = this.ifNotExist(req, { collection: 'categories', query: { name, parents: '', image: '' }, check: [{ name }], action: 'insert', getInserted: true });
             }
         }
 
@@ -801,7 +812,7 @@ class PostHandler {
         for (let i of data.newTags) {
             let name = i.trim();
             if (name != '') {
-                runTags[i] = this.ifNotExist({ collection: 'tags', query: { name, image: '' }, check: [{ name }], action: 'insert', getInserted: true });
+                runTags[i] = this.ifNotExist(req, { collection: 'tags', query: { name, image: '' }, check: [{ name }], action: 'insert', getInserted: true });
             }
         }
 
@@ -846,7 +857,7 @@ class PostHandler {
                 delete data.newCats;
                 delete data.image;
 
-                this.ifNotExist({ collection: 'items', query: data, check: [{ name: data.name }, { code: data.code }], action: 'insert', getInserted: true }).then(result => {
+                this.ifNotExist(req, { collection: 'items', query: data, check: [{ name: data.name }, { code: data.code }], action: 'insert', getInserted: true }).then(result => {
 
                     if (kerds.isset(result.found)) {
                         this.respond(req, res, result);
@@ -857,7 +868,7 @@ class PostHandler {
 
                         let uploadImage = () => {
                             fs.writeFile(imagePath, image.value, c => {
-                                this.set({ collection: 'items', query: { _id: new ObjectId(result[0]._id) }, options: { '$set': { image: imagePath } } }).then(result => {
+                                this.set(req, { collection: 'items', query: { _id: new ObjectId(result[0]._id) }, options: { '$set': { image: imagePath } } }).then(result => {
                                     this.respond(req, res, result == 1);
                                     this.makeHistory(req, result == 1, { action: 'Create Item', data, collection: 'items', item: result[0]._id });
                                 });
@@ -884,14 +895,14 @@ class PostHandler {
     }
 
     deleteItem(req, res, data) {
-        this.recycle({ collection: 'items', query: { _id: new ObjectId(data.id) } }).then(result => {
+        this.recycle(req, { collection: 'items', query: { _id: new ObjectId(data.id) } }).then(result => {
             this.respond(req, res, result == 1);
             this.makeHistory(req, result == 1, { action: 'Delete Item', data, collection: 'items', item: data.id });
         });
     }
 
     deleteItemImage(req, res, data) {
-        db.update({ collection: 'items', query: { _id: new ObjectId(data.id) }, options: { '$set': { image: null } } }).then(result => {
+        global.sessions[req.sessionId].db.update({ collection: 'items', query: { _id: new ObjectId(data.id) }, options: { '$set': { image: null } } }).then(result => {
             kerds.deleteRecursive(`./items/${data.id}/image.png`, () => {
                 this.respond(req, res, result == 1);
                 this.makeHistory(req, result == 1, { action: 'Delete Item Image', data, collection: 'items', item: data.id });
@@ -905,7 +916,7 @@ class PostHandler {
 
         let uploadImage = () => {
             fs.writeFile(image, data.newImage.value, c => {
-                db.update({ collection: 'items', query: { _id: new ObjectId(data.id) }, options: { '$set': { image } } }).then(result => {
+                global.sessions[req.sessionId].db.update({ collection: 'items', query: { _id: new ObjectId(data.id) }, options: { '$set': { image } } }).then(result => {
                     this.respond(req, res, result == 1);
                     this.makeHistory(req, result == 1, { action: 'Change Item Image', data, collection: 'items', item: data.id });
                 });
@@ -933,7 +944,7 @@ class PostHandler {
         for (let i of data.newCats) {
             let name = i.trim();
             if (name != '') {
-                runCats[i] = this.ifNotExist({ collection: 'categories', query: { name, parents: '', image: '' }, check: [{ name }], action: 'insert', getInserted: true });
+                runCats[i] = this.ifNotExist(req, { collection: 'categories', query: { name, parents: '', image: '' }, check: [{ name }], action: 'insert', getInserted: true });
             }
         }
 
@@ -946,7 +957,7 @@ class PostHandler {
         for (let i of data.newTags) {
             let name = i.trim();
             if (name != '') {
-                runTags[i] = this.ifNotExist({ collection: 'tags', query: { name, image: '' }, check: [{ name }], action: 'insert', getInserted: true });
+                runTags[i] = this.ifNotExist(req, { collection: 'tags', query: { name, image: '' }, check: [{ name }], action: 'insert', getInserted: true });
             }
         }
 
@@ -993,7 +1004,7 @@ class PostHandler {
 
                 let _id = data.id;
                 delete data.id;
-                this.ifIExist({ collection: 'items', query: { _id: new ObjectId(_id) }, options: { '$set': data }, action: 'update', check: [{ query: { name: data.name }, against: { _id } }, { query: { name: data.code }, against: { _id } }] }).then(result => {
+                this.ifIExist(req, { collection: 'items', query: { _id: new ObjectId(_id) }, options: { '$set': data }, action: 'update', check: [{ query: { name: data.name }, against: { _id } }, { query: { name: data.code }, against: { _id } }] }).then(result => {
                     this.respond(req, res, result);
                     this.makeHistory(req, result == 1, { action: 'Edit Item', data, collection: 'items', item: _id });
                 });
@@ -1005,7 +1016,7 @@ class PostHandler {
         data.contents = JSON.parse(data.contents);
         data.tasks = JSON.parse(data.tasks);
 
-        this.ifNotExist({ collection: 'customforms', query: data, check: [{ name: data.name }], action: 'insert', getInserted: true }).then(result => {
+        this.ifNotExist(req, { collection: 'customforms', query: data, check: [{ name: data.name }], action: 'insert', getInserted: true }).then(result => {
             if (kerds.isset(result.found)) {
                 this.respond(req, res, result);
             }
@@ -1022,14 +1033,22 @@ class PostHandler {
         data.contents = JSON.parse(data.contents);
         data.tasks = JSON.parse(data.tasks);
 
-        this.ifIExist({ collection: 'customforms', query: { _id: new ObjectId(_id) }, options: { '$set': data }, action: 'update', check: [{ query: { name: data.name }, against: { _id } }] }).then(result => {
+        this.ifIExist(req, { collection: 'customforms', query: { _id: new ObjectId(_id) }, options: { '$set': data }, action: 'update', check: [{ query: { name: data.name }, against: { _id } }] }).then(result => {
             this.respond(req, res, result);
             this.makeHistory(req, result == 1, { action: 'Edit Custom Form', data, collection: 'customforms', item: _id });
+
+            if (result == 1) {
+                global.sessions[req.sessionId].db.find({ collection: 'customforms', query: { _id: new ObjectId(_id) } }).then(customForm => {
+                    this.set(req, { collection: 'forms', query: { 'selectedForm._id': _id }, options: { '$set': { selectedForm: customForm } }, many: true }).then(result => {
+                        console.log(result);
+                    });
+                });
+            }
         });
     }
 
     deleteCustomForm(req, res, data) {
-        this.recycle({ collection: 'customforms', query: { _id: new ObjectId(data.id) } }).then(result => {
+        this.recycle(req, { collection: 'customforms', query: { _id: new ObjectId(data.id) } }).then(result => {
             this.respond(req, res, result == 1);
             this.makeHistory(req, result == 1, { action: 'Delete Custom Form', data, collection: 'customforms', item: data.id });
         });
@@ -1040,7 +1059,7 @@ class PostHandler {
         data.time = new Date().getTime();
         data.contents = JSON.parse(data.contents);
 
-        this.ifNotExist({ collection: 'lists', query: data, check: [{ name: data.name }], action: 'insert', getInserted: true }).then(result => {
+        this.ifNotExist(req, { collection: 'lists', query: data, check: [{ name: data.name }], action: 'insert', getInserted: true }).then(result => {
 
             if (kerds.isset(result.found)) {
                 this.respond(req, res, result);
@@ -1062,7 +1081,7 @@ class PostHandler {
             content[name] = data.new[name];
         }
 
-        db.find({ collection: 'lists', query: { _id: new ObjectId(data.id) }, }).then(list => {
+        global.sessions[req.sessionId].db.find({ collection: 'lists', query: { _id: new ObjectId(data.id) }, }).then(list => {
             let contents = list.contents;
 
             let ids = kerds.object.valueOfObjectArray(contents, '_id');
@@ -1072,7 +1091,7 @@ class PostHandler {
             }
 
             content._id = id;
-            this.update({ collection: 'lists', query: { _id: new ObjectId(data.id) }, options: { '$push': { contents: content } } }).then(result => {
+            this.update(req, { collection: 'lists', query: { _id: new ObjectId(data.id) }, options: { '$push': { contents: content } } }).then(result => {
                 this.respond(req, res, result == 1);
                 this.makeHistory(req, result == 1, { action: 'Create List Item', data, item: content._id, collection: `lists.${data.id}` });
             })
@@ -1087,21 +1106,21 @@ class PostHandler {
             content[name] = data.item[name];
         }
 
-        this.update({ collection: 'lists', query: { _id: new ObjectId(data.id), 'contents._id': data.item._id }, options: { '$set': { 'contents.$': content } } }).then(result => {
+        this.update(req, { collection: 'lists', query: { _id: new ObjectId(data.id), 'contents._id': data.item._id }, options: { '$set': { 'contents.$': content } } }).then(result => {
             this.respond(req, res, result == 1);
             this.makeHistory(req, result == 1, { action: 'Edit List Item', data, collection: `lists.${data.id}`, item: content._id });
         });
     }
 
     deleteListItem(req, res, data) {
-        this.update({ collection: 'lists', query: { _id: new ObjectId(data.id) }, options: { '$pull': { contents: { _id: data.row } } } }).then(result => {
+        this.update(req, { collection: 'lists', query: { _id: new ObjectId(data.id) }, options: { '$pull': { contents: { _id: data.row } } } }).then(result => {
             this.respond(req, res, result == 1);
             this.makeHistory(req, result == 1, { action: 'Delete List Item', data, collection: `lists.${data.id}`, item: data.row });
         });
     }
 
     deleteList(req, res, data) {
-        this.recycle({ collection: 'lists', query: { _id: new ObjectId(data.id) } }).then(result => {
+        this.recycle(req, { collection: 'lists', query: { _id: new ObjectId(data.id) } }).then(result => {
             this.respond(req, res, result == 1);
             this.makeHistory(req, result == 1, { action: 'Delete List', data, collection: 'lists', item: data.id });
         });
@@ -1111,7 +1130,7 @@ class PostHandler {
         let _id = data.id;
         delete data.id;
         data.lastModified = new Date().getTime();
-        this.ifIExist({ collection: 'lists', query: { _id: new ObjectId(_id) }, options: { '$set': data }, action: 'update', check: [{ query: { name: data.name }, against: { _id } }] }).then(result => {
+        this.ifIExist(req, { collection: 'lists', query: { _id: new ObjectId(_id) }, options: { '$set': data }, action: 'update', check: [{ query: { name: data.name }, against: { _id } }] }).then(result => {
             this.respond(req, res, result);
             this.makeHistory(req, result == 1, { action: 'Edit List', data, collection: 'lists', item: _id });
         });
@@ -1119,14 +1138,14 @@ class PostHandler {
 
     getSourcesNames(req, res, data) {
         let collections = {};
-        db.getCollections().then(result => {//Get all collections name
+        global.sessions[req.sessionId].db.getCollections().then(result => {//Get all collections name
             let run = {};
             for (let i = 0; i < result.length; i++) {
                 if (result[i].name.toLowerCase() == 'sessions') {
                     continue;
                 }
 
-                run[result[i].name] = db.find({ collection: result[i].name, query: {}, many: true });//get each collection's content
+                run[result[i].name] = global.sessions[req.sessionId].db.find({ collection: result[i].name, query: {}, many: true });//get each collection's content
             }
 
             kerds.runParallel(run, found => {
@@ -1151,7 +1170,7 @@ class PostHandler {
         let keys = [];
         let [collection, item] = data.name.replace('@', '').split('#');
 
-        db.find({ collection, query: {}, many: true }).then(result => {
+        global.sessions[req.sessionId].db.find({ collection, query: {}, many: true }).then(result => {
             for (let i = 0; i < result.length; i++) {
                 if (kerds.isset(item)) {
                     let list = kerds.array.find(result, single => {
@@ -1182,14 +1201,14 @@ class PostHandler {
 
     getSources(req, res, data) {
         let collections = {};
-        db.getCollections().then(result => {//Get all collections name
+        global.sessions[req.sessionId].db.getCollections().then(result => {//Get all collections name
             let run = {};
             for (let i = 0; i < result.length; i++) {
                 if (result[i].name.toLowerCase() == 'sessions') {
                     continue;
                 }
 
-                run[result[i].name] = db.find({ collection: result[i].name, query: {}, many: true });//get each collection's content
+                run[result[i].name] = global.sessions[req.sessionId].db.find({ collection: result[i].name, query: {}, many: true });//get each collection's content
             }
 
             kerds.runParallel(run, found => {
@@ -1204,80 +1223,76 @@ class PostHandler {
         });
     }
 
-    performTasks(tasks, type, callback) {
-        db.find({ collection: 'customforms', query: { _id: new ObjectId(type) }, projection: { tasks: 1, target: 1, _id: 0 } }).then(customTasks => {//get all the custom tasks
-            let target = kerds.inBetween(customTasks.target, '$#&{', '}&#$');//get the forms target
-            try {
-                target = JSON.parse(target).collection;
-            } catch (error) {
-                callback(-1);
-                return;
-            }
-            let run = {};
-            let customT;
+    performTasks(tasks, selectedForm, callback) {
+        let target = kerds.inBetween(selectedForm.target, '$#&{', '}&#$');//get the forms target
+        try {
+            target = JSON.parse(target).collection;
+        } catch (error) {
+            callback(-1);
+            return;
+        }
+        let run = {};
+        let customT;
 
-            for (let name in tasks) {
-                customT = kerds.array.find(customTasks.tasks, t => {//get the tasks sample
-                    return t.name == name;
+        for (let name in tasks) {
+            customT = kerds.array.find(selectedForm.tasks, t => {//get the tasks sample
+                return t.name == name;
+            });
+
+            for (let i = 0; i < tasks[name].length; i++) {
+                let update = {};
+                update[customT.target] = { action: customT.action, value: tasks[name][i].value };
+                run[`${name}.${i}`] = global.sessions[req.sessionId].db.modify({ collection: target, query: { _id: new ObjectId(tasks[name][i]._id) }, update });//make the update
+            }
+        }
+
+        kerds.runParallel(run, result => {
+            for (let name in result) {
+                let [taskName, position] = name.split('.');
+
+                customT = kerds.array.find(selectedForm.tasks, t => {
+                    return t.name == taskName;
                 });
 
-                for (let i = 0; i < tasks[name].length; i++) {
-                    let update = {};
-                    update[customT.target] = { action: customT.action, value: tasks[name][i].value };
-                    run[`${name}.${i}`] = db.modify({ collection: target, query: { _id: new ObjectId(tasks[name][i]._id) }, update });//make the update
-                }
+                tasks[taskName][position].previous = result[name][customT.target];
             }
-
-            kerds.runParallel(run, result => {
-                for (let name in result) {
-                    let [taskName, position] = name.split('.');
-
-                    customT = kerds.array.find(customTasks.tasks, t => {
-                        return t.name == taskName;
-                    });
-
-                    tasks[taskName][position].previous = result[name][customT.target];
-                }
-                callback(tasks);
-            });
+            callback(tasks);
         });
     }
 
-    revertTasks(tasks, type, callback) {
-        db.find({ collection: 'customforms', query: { _id: new ObjectId(type) }, projection: { tasks: 1, target: 1, _id: 0 } }).then(customTasks => {
-            let target = kerds.inBetween(customTasks.target, '$#&{', '}&#$');
-            try {
-                target = JSON.parse(target).collection;
-            } catch (error) {
-                callback(-1);
-                return;
+    revertTasks(tasks, selectedForm, callback) {
+        let target = kerds.inBetween(selectedForm.target, '$#&{', '}&#$');
+        try {
+            target = JSON.parse(target).collection;
+        } catch (error) {
+            callback(-1);
+            return;
+        }
+        let run = {};
+        let customT;
+        for (let name in tasks) {
+            customT = kerds.array.find(selectedForm.tasks, t => {
+                return t.name == name;
+            });
+
+            for (let i = 0; i < tasks[name].length; i++) {
+                let update = {};
+                update[customT.target] = { action: 'Set', value: tasks[name][i].previous };
+                run[`${name}.${i}`] = global.sessions[req.sessionId].db.modify({ collection: target, query: { _id: new ObjectId(tasks[name][i]._id) }, update });
             }
-            let run = {};
-            let customT;
-            for (let name in tasks) {
-                customT = kerds.array.find(customTasks.tasks, t => {
-                    return t.name == name;
+        }
+
+        kerds.runParallel(run, result => {
+            for (let name in result) {
+                let [taskName, position] = name.split('.');
+
+                customT = kerds.array.find(selectedForm.tasks, t => {
+                    return t.name == taskName;
                 });
 
-                for (let i = 0; i < tasks[name].length; i++) {
-                    let update = {};
-                    update[customT.target] = { action: 'Set', value: tasks[name][i].previous };
-                    run[`${name}.${i}`] = db.modify({ collection: target, query: { _id: new ObjectId(tasks[name][i]._id) }, update });
-                }
+                tasks[taskName][position].value = result[name][customT.target];
             }
-
-            kerds.runParallel(run, result => {
-                for (let name in result) {
-                    let [taskName, position] = name.split('.');
-
-                    customT = kerds.array.find(customTasks.tasks, t => {
-                        return t.name == taskName;
-                    });
-
-                    tasks[taskName][position].value = result[name][customT.target];
-                }
-                callback(tasks);
-            });
+            callback(tasks);
         });
     }
 
@@ -1285,14 +1300,15 @@ class PostHandler {
         data.author = global.sessions[req.sessionId].user;
         data.time = new Date().getTime();
         data.contents = JSON.parse(data.contents);
+        data.selectedForm = JSON.parse(data.selectedForm);
         data.tasks = JSON.parse(data.tasks);
 
-        this.performTasks(data.tasks, data.type, tasks => {
+        this.performTasks(data.tasks, data.selectedForm, tasks => {
             if (tasks != -1) {
                 data.tasks = tasks;
                 this.makeHistory(req, tasks != - 1, { action: 'Perform Tasks', tasks });
             }
-            this.insert({ collection: 'forms', query: data, getInserted: true }).then(result => {
+            this.insert(req, { collection: 'forms', query: data, getInserted: true }).then(result => {
                 this.respond(req, res, result);
                 this.makeHistory(req, result == 1, { action: 'Create Form', data, collection: 'forms', item: result[0]._id });
             });
@@ -1300,10 +1316,10 @@ class PostHandler {
     }
 
     deleteForm(req, res, data) {
-        db.find({ collection: 'forms', query: { _id: new ObjectId(data.id) }, projection: { type: 1, tasks: 1, _id: 0 } }).then(form => {
+        global.sessions[req.sessionId].db.find({ collection: 'forms', query: { _id: new ObjectId(data.id) }, projection: { type: 1, tasks: 1, _id: 0 } }).then(form => {
             this.revertTasks(form.tasks, form.type, (tasks) => {
                 this.makeHistory(req, tasks != - 1, { action: 'Revert Tasks', tasks });
-                db.delete({ collection: 'forms', query: { _id: new ObjectId(data.id) } }).then(result => {
+                global.sessions[req.sessionId].db.delete({ collection: 'forms', query: { _id: new ObjectId(data.id) } }).then(result => {
                     this.respond(req, res, result.result.ok == 1);
                     this.makeHistory(req, result.result.ok == 1, { action: 'Delete Form', data, collection: 'forms', item: data.id })
                 });
@@ -1314,22 +1330,23 @@ class PostHandler {
     editForm(req, res, data) {
         data.time = new Date().getTime();
         data.contents = JSON.parse(data.contents);
+        data.selectedForm = JSON.parse(data.selectedForm);
         data.tasks = JSON.parse(data.tasks);
         let id = data.id;
         delete data.id;
         data.lastModified = new Date().getTime();
-        db.find({ collection: 'forms', query: { _id: new ObjectId(id) }, projection: { type: 1, tasks: 1, _id: 0 } }).then(form => {
-            this.revertTasks(form.tasks, form.type, (reverted) => {
+        global.sessions[req.sessionId].db.find({ collection: 'forms', query: { _id: new ObjectId(id) }, projection: { type: 1, tasks: 1, _id: 0 } }).then(form => {
+            this.revertTasks(form.tasks, data.selectedForm, (reverted) => {
                 this.makeHistory(req, reverted != - 1, { action: 'Perform Tasks', reverted });
-                this.performTasks(data.tasks, data.type, performed => {
+                this.performTasks(data.tasks, data.selectedForm, performed => {
                     this.makeHistory(req, performed != - 1, { action: 'Perform Tasks', performed });
-                    this.set({
+                    this.set(req, {
                         collection: 'forms', query: { _id: new ObjectId(id) }, options: {
                             '$set': data
                         }
                     }).then(result => {
                         this.respond(req, res, result);
-                        this.makeHistory(req, tasks == 1, { action: 'Update From', data, collection: 'forms', item: id });
+                        this.makeHistory(req, result == 1, { action: 'Update From', data, collection: 'forms', item: id });
                     });
                 });
             });
@@ -1339,7 +1356,7 @@ class PostHandler {
     saveView(req, res, data) {
         data.view = JSON.parse(data.view);
         data.owner = global.sessions[req.sessionId].user;
-        db.save({ collection: 'views', query: data, check: { owner: global.sessions[req.sessionId].user } }).then(result => {
+        global.sessions[req.sessionId].db.save({ collection: 'views', query: data, check: { owner: global.sessions[req.sessionId].user } }).then(result => {
             this.respond(req, res, result);
             this.makeHistory(req, result == 1, { action: 'Save View', data, collection: 'views', item: data.owner });
         });
@@ -1348,7 +1365,7 @@ class PostHandler {
     createReportGenerator(req, res, data) {
         data.contents = JSON.parse(data.contents);
 
-        this.ifNotExist({ collection: 'reportgenerators', query: data, check: [{ name: data.name }], action: 'insert', getInserted: true }).then(result => {
+        this.ifNotExist(req, { collection: 'reportgenerators', query: data, check: [{ name: data.name }], action: 'insert', getInserted: true }).then(result => {
             if (kerds.isset(result.found)) {
                 this.respond(req, res, result);
             }
@@ -1364,14 +1381,14 @@ class PostHandler {
         delete data.id;
         data.contents = JSON.parse(data.contents);
         data.lastModified = new Date().getTime();
-        this.ifIExist({ collection: 'reportgenerators', query: { _id: new ObjectId(_id) }, options: { '$set': data }, action: 'update', check: [{ query: { name: data.name }, against: { _id } }] }).then(result => {
+        this.ifIExist(req, { collection: 'reportgenerators', query: { _id: new ObjectId(_id) }, options: { '$set': data }, action: 'update', check: [{ query: { name: data.name }, against: { _id } }] }).then(result => {
             this.respond(req, res, result);
             this.makeHistory(req, result == 1, { action: 'Edit Report Generator', data, collection: 'reportgenerators', item: _id });
         });
     }
 
     deleteReportGenerator(req, res, data) {
-        this.recycle({ collection: 'reportgenerators', query: { _id: new ObjectId(data.id) } }).then(result => {
+        this.recycle(req, { collection: 'reportgenerators', query: { _id: new ObjectId(data.id) } }).then(result => {
             this.respond(req, res, result == 1);
             this.makeHistory(req, result == 1, { action: 'Delete Report Generator', data, collection: 'reportgenerators', item: data.id });
         });
@@ -1380,7 +1397,7 @@ class PostHandler {
     createReport(req, res, data) {
         data.content = JSON.parse(data.content);
         data.author = global.sessions[req.sessionId].user;
-        this.insert({ collection: 'reports', query: data, getInserted: true }).then(result => {
+        this.insert(req, { collection: 'reports', query: data, getInserted: true }).then(result => {
             this.respond(req, res, kerds.isset(result[0]._id));
             this.makeHistory(req, kerds.isset(result[0]._id), { action: 'Create Report', data, collection: 'reports', item: result[0]._id });
         });
@@ -1389,14 +1406,14 @@ class PostHandler {
     editReport(req, res, data) {
         data.content = JSON.parse(data.content);
 
-        this.set({ collection: 'reports', query: { _id: new ObjectId(data.id) }, options: { '$set': { content: data.content } } }).then(result => {
+        this.set(req, { collection: 'reports', query: { _id: new ObjectId(data.id) }, options: { '$set': { content: data.content } } }).then(result => {
             this.respond(req, res, result == 1);
             this.makeHistory(req, result == 1, { action: 'Edit Report', data, collection: 'reports', item: data.id });
         });
     }
 
     deleteReport(req, res, data) {
-        this.recycle({ collection: 'reports', query: { _id: new ObjectId(data.id) } }).then(result => {
+        this.recycle(req, { collection: 'reports', query: { _id: new ObjectId(data.id) } }).then(result => {
             this.respond(req, res, result == 1);
             this.makeHistory(req, result == 1, { action: 'Delete Report', data, collection: 'reports', item: data.id });
         });
@@ -1407,11 +1424,11 @@ class PostHandler {
         let query = data.query.toLowerCase();
 
         kerds.runParallel({
-            items: db.find({ collection: 'items', query: {}, many: true }),
-            categories: db.find({ collection: 'categories', query: {}, many: true }),
-            tags: db.find({ collection: 'tags', query: {}, many: true }),
-            users: db.find({ collection: 'users', query: {}, many: true }),
-            lists: db.find({ collection: 'lists', query: {}, many: true }),
+            items: global.sessions[req.sessionId].db.find({ collection: 'items', query: {}, many: true }),
+            categories: global.sessions[req.sessionId].db.find({ collection: 'categories', query: {}, many: true }),
+            tags: global.sessions[req.sessionId].db.find({ collection: 'tags', query: {}, many: true }),
+            users: global.sessions[req.sessionId].db.find({ collection: 'users', query: {}, many: true }),
+            lists: global.sessions[req.sessionId].db.find({ collection: 'lists', query: {}, many: true }),
         }, result => {
             return new Promise((resolve, reject) => {
                 for (let collection in result) {
@@ -1441,18 +1458,18 @@ class PostHandler {
         });
     }
 
-    notify(params) {
+    notify(req, params) {
         params.time = new Date().getTime();
         params.read = {};
         params.sent = {};
 
-        db.insert({ collection: 'notifications', query: params });
+        global.sessions[req.sessionId].db.insert({ collection: 'notifications', query: params });
     }
 
     getNotifications(req, res, data) {
         let notifications = [];
         let user = data.id || global.sessions[req.sessionId].user;
-        db.find({ collection: 'notifications', query: {}, many: true }).then(found => {
+        global.sessions[req.sessionId].db.find({ collection: 'notifications', query: {}, many: true }).then(found => {
             for (let i = 0; i < found.length; i++) {
                 if (found[i].users.includes(user)) {
                     found[i].status = kerds.isset(found[i].read[user]) ? 'Read' : 'UnRead';
@@ -1480,9 +1497,9 @@ class PostHandler {
 
     sentNotification(req, res, data) {
         data.id = new ObjectId(data.id);
-        db.find({ collection: 'notifications', query: { _id: data.id }, projection: { sent: 1, _id: 0 } }).then(note => {
+        global.sessions[req.sessionId].db.find({ collection: 'notifications', query: { _id: data.id }, projection: { sent: 1, _id: 0 } }).then(note => {
             note.sent[global.sessions[req.sessionId].user] = new Date().getTime();
-            this.set({ collection: 'notifications', query: { _id: data.id }, options: { '$set': { sent: note.sent } } }).then(read => {
+            this.set(req, { collection: 'notifications', query: { _id: data.id }, options: { '$set': { sent: note.sent } } }).then(read => {
                 this.respond(req, res, read == 1);
             });
         });
@@ -1490,9 +1507,9 @@ class PostHandler {
 
     readNotification(req, res, data) {
         data.id = new ObjectId(data.id);
-        db.find({ collection: 'notifications', query: { _id: data.id }, projection: { read: 1, _id: 0 } }).then(note => {
+        global.sessions[req.sessionId].db.find({ collection: 'notifications', query: { _id: data.id }, projection: { read: 1, _id: 0 } }).then(note => {
             note.read[global.sessions[req.sessionId].user] = new Date().getTime();
-            this.set({ collection: 'notifications', query: { _id: data.id }, options: { '$set': { read: note.read } } }).then(read => {
+            this.set(req, { collection: 'notifications', query: { _id: data.id }, options: { '$set': { read: note.read } } }).then(read => {
                 this.respond(req, res, read == 1);
             });
         });

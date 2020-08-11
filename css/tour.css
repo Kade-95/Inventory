@@ -1,0 +1,135 @@
+#tour-window {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    z-index: 10000;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0
+}
+
+#tour-guide-container {
+    position: absolute;
+}
+
+#tour-guide {
+    display: grid;
+    gap: 1em;
+    align-items: center;
+    grid-template-rows: max-content max-content;
+    border: 2px solid var(--accient-color);
+    position: relative;
+    background-color: var(--primary-color);
+    width: min-content;
+}
+
+#tour-guide-pointer {
+    width: 0;
+    height: 0;
+    position: absolute;
+    z-index: -1;
+}
+
+#tour-guide-pointer.topleft {
+    border-top: 25px solid var(--accient-color);
+    border-left: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+    right: 100%;
+    top: 0;
+}
+
+#tour-guide-pointer.bottomleft {
+    border-bottom: 25px solid var(--accient-color);
+    border-left: 10px solid transparent;
+    border-top: 10px solid transparent;
+    right: 100%;
+    bottom: 0;
+}
+
+#tour-guide-pointer.topright {
+    border-top: 25px solid var(--accient-color);
+    border-right: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+    left: 100%;
+    top: 0;
+}
+
+#tour-guide-pointer.bottomright {
+    border-bottom: 25px solid var(--accient-color);
+    border-right: 10px solid transparent;
+    border-top: 10px solid transparent;
+    left: 100%;
+    bottom: 0;
+}
+
+#tour-guide-pointer.lefttop {
+    border-left: 25px solid var(--accient-color);
+    border-top: 10px solid transparent;
+    border-right: 10px solid transparent;
+    left: 0;
+    bottom: 100%;
+}
+
+#tour-guide-pointer.righttop {
+    border-right: 25px solid var(--accient-color);
+    border-top: 10px solid transparent;
+    border-left: 10px solid transparent;
+    right: 0;
+    bottom: 100%;
+}
+
+#tour-guide-pointer.leftbottom {
+    border-left: 25px solid var(--accient-color);
+    border-bottom: 10px solid transparent;
+    border-right: 10px solid transparent;
+    left: 0;
+    top: 100%;
+}
+
+#tour-guide-pointer.rightbottom {
+    border-right: 25px solid var(--accient-color);
+    border-bottom: 10px solid transparent;
+    border-left: 10px solid transparent;
+    right: 0;
+    top: 100%;
+}
+
+#tour-guide-speech {
+    display: flex;
+    font-family: monospace;
+    font-size: 1.2em;
+    text-transform: capitalize;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 1em;
+}
+
+#tour-guide-control {
+    display: grid;
+    grid-template-columns: repeat(3, max-content);
+    gap: 1em;
+    padding: .3em;
+    justify-content: center;
+    align-items: center;
+}
+
+#tour-guide-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+}
+
+.tour-guide-stop {
+    border: 1px solid black;
+    border-radius: 100%;
+    margin: .1em;
+    padding: .3em;
+    cursor: pointer;
+}
+
+.tour-guide-stop:hover, .tour-guide-stop.current {
+    background-color: black;
+}

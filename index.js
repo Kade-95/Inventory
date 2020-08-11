@@ -1,5 +1,5 @@
 'use strict'
-let { Kerds, Database } = require('./../Libraries/Kerds');
+let { Kerds, Database } = require('kerds');
 global.fs = require('fs');
 global.zlib = require('zlib');
 
@@ -28,7 +28,8 @@ let metadata = {
         './css/search.css',
         './css/recycle.css',
         './css/notifications.css',
-        './fontawesome/css/all.css'
+        './fontawesome/css/all.css',
+        './css/tour.css'
     ],
     scripts: {
         './includes/index.js': { type: 'module' },
@@ -49,16 +50,8 @@ let view = new View(metadata, 'webapp');
 
 function setup() {
     return new Promise((resolve, rejects) => {
+        db.createCollection('sessions');
         resolve(true);
-    });
-}
-
-global.setUpAccount = (data, callback) => {
-    bcrypt.hash(data.password, 10).then(hash => {
-        db.insert({ collection: 'users', query: { userName: data.admin, currentPassword: hash, userType: 'Admin' }, getInserted: true }).then(user => {
-            db.createCollection('lists');
-            callback(user[0]);
-        });
     });
 }
 
@@ -70,7 +63,10 @@ setup().then(() => {
     kerds.createServer(port,
         params => {
             view.createView(params);
-            db.setName(global.sessions[params.sessionId].account || 'inventory');
+            if (!kerds.isset(global.sessions[params.sessionId].db)) {
+                global.sessions[params.sessionId].db = new Database({ address: "mongodb://localhost:27017/", name: 'inventory' });
+            }
+            global.sessions[params.sessionId].db.setName(global.sessions[params.sessionId].account || 'inventory');
         }, protocol,
         { origins: ['*'] },
         {
@@ -80,7 +76,12 @@ setup().then(() => {
     );
 });
 
-kerds.recordSession(24 * 60 * 60 * 1000);
-kerds.handleRequests = (req, res, form) => {
+kerds.recordSession(24 * 60 * 60 * 1000, ['account', 'user']);
+kerds.handleRequests = (req, res, form, params) => {
+    if (!kerds.isset(global.sessions[req.sessionId].db)) {
+        global.sessions[req.sessionId].db = new Database({ address: "mongodb://localhost:27017/", name: 'inventory' });
+    }
+    global.sessions[req.sessionId].db.setName(global.sessions[req.sessionId].account || 'inventory');
     postHandler.act(req, res, form);
 }
+

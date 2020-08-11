@@ -132,9 +132,11 @@ let customForms = (mainBody) => {
             for (let name in data.contents) {
                 if (data.contents[name].source != '') {
                     delete data.contents[name].source;
-                    data.contents[name].params.contents = [];
-                    for (let i = 0; i < fetched[name].length; i++) {
-                        data.contents[name].params.contents = data.contents[name].params.contents.concat(fetched[name][i])
+                    if (kerdx.isset(data.contents[name].params)) {
+                        data.contents[name].params.contents = [];
+                        for (let i = 0; i < fetched[name].length; i++) {
+                            data.contents[name].params.contents = data.contents[name].params.contents.concat(fetched[name][i])
+                        }
                     }
                 }
             }
@@ -188,10 +190,10 @@ let customForms = (mainBody) => {
         let data = [];
         for (let i = 0; i < allData.length; i++) {
             if (allData[i].value.source != '') {
-                data[allData[i].value.name] = { perceptorElement: 'createSelect', params: { attributes: {} }, source: allData[i].value.source, name: allData[i].value.name };
+                data[allData[i].value.name] = { perceptorElement: 'createSelect', params: { attributes: { name: allData[i].value.name } }, source: allData[i].value.source, name: allData[i].value.name };
             }
             else {
-                data[allData[i].value.name] = { element: 'input', attributes: { type: allData[i].value.type }, name: allData[i].value.name };
+                data[allData[i].value.name] = { element: 'input', attributes: { type: allData[i].value.type, name: allData[i].value.name }, name: allData[i].value.name };
             }
         }
         return data;
@@ -484,7 +486,7 @@ let customForms = (mainBody) => {
         let popUp = kerdx.popUp(createForm);
         popUp.find('#toggle-window').click();
         dataContainer = createForm.find('.kerdx-form-buttons').find('#data-container');
-        taskContainer = createForm.find('.kerdx-form-buttons').find('#task-container');
+        taskContainer = createForm.find('.kerdx-form-buttons').find('#tasks-container');
 
         make(createForm);
     }
@@ -621,7 +623,7 @@ let customForms = (mainBody) => {
             system.connect({ data }).then(result => {
                 if (result == 1) {
                     system.notify({ note: `Custom Form ${kerdx.isset(id) ? 'Editted' : 'Created'}` });
-                    reload();
+                    system.reload();
                 }
                 else if (result.found) {
                     system.notify({ note: `${result.found} already in exists` });
@@ -698,9 +700,8 @@ let customForms = (mainBody) => {
         ]);
         let mainContentWindow = settingsMainWindow.find('.settings-content-window');
 
-        system.get({ collection: 'customforms', query: {}, projection: { name: 1, title: 1 , recycled: 1}, many: true }).then(customforms => {
-            
-            customForms = kerdx.array.findAll(customForms, item => {
+        system.get({ collection: 'customforms', query: {}, projection: { name: 1, title: 1, recycled: 1 }, many: true }).then(customforms => {
+            customforms = kerdx.array.findAll(customforms, item => {
                 return item.recycled == undefined || item.recycled == false;
             });
 

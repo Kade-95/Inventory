@@ -27,9 +27,9 @@ class App {
         header.css({ display: 'none' });
 
         let main = document.body.find('#main-window');
-
+        let page = location.pathname.slice(1, location.pathname.indexOf('.html'));
         let panelLink = (name, mClass) => {
-            let profileLink = kerdx.createElement({
+            let link = kerdx.createElement({
                 element: 'a', attributes: { class: `panel-link ${name}`, href: name + '.html', title: name }, children: [
                     { element: 'i', attributes: { class: `panel-image ${mClass}` } },
                     { element: 'a', attributes: { class: 'panel-text' }, text: name }
@@ -37,11 +37,16 @@ class App {
             });
 
             if (name == 'profile') {
-                profileLink.render({ element: 'img', attributes: { class: `panel-image`, src: mClass } });
+                link.render({ element: 'img', attributes: { class: `panel-image`, src: mClass } });
             }
 
-            return profileLink;
+            if(name == page){
+                link.classList.add('active');
+            }
+
+            return link;
         }
+
         let userImage = document.body.dataset.userImage;
         if (userImage == 'null') {
             userImage = 'images/logo.png';
@@ -61,7 +66,7 @@ class App {
                 panelLink('logout', 'fas fa-sign-out-alt')
             ]
         });
-
+        
         main.makeElement({
             element: 'section', attributes: { id: 'landed' }, children: [
                 {
@@ -116,7 +121,7 @@ class App {
                                         { element: 'i', attributes: { class: 'icon fas fa-search', id: 'open-search' } }
                                     ]
                                 },
-                                { element: 'h5', attributes: { id: 'current-page-name' }, text: location.pathname.slice(1, location.pathname.indexOf('.html')) },
+                                { element: 'h5', attributes: { id: 'current-page-name' }, text: page },
                             ]
                         },
                         {
@@ -127,8 +132,9 @@ class App {
             ]
         });
 
-        this.listen();
         this.route();
+        this.listen();
+        this.tour();
     }
 
     listen() {
@@ -616,11 +622,16 @@ class App {
     }
 
     checkNotifications = () => {
+        return
         let notificationsButtons = document.body.findAll('.panel-link.notifications');
         if (!this.checkedNotifications) {
             system.getNotifications('unread').then(notifications => {
                 if (notifications.length > 0) {
                     system.notify({ note: 'You have some unread notifications', link: 'notifications.html' });
+                    for (let i = 0; i < notificationsButtons.length; i++) {
+                        notificationsButtons[i].css({ color: 'var(--accient-color)' });
+                        notificationsButtons[i].find('i').addClass('fa-spin');
+                    }
                 }
                 this.checkedNotifications = true;
             });
@@ -642,6 +653,176 @@ class App {
                 }
             })
         }, 1000 * 30);
+    }
+
+    tour() {
+        if (kerdx.isset(system.tour)) {
+            this.takeTour();
+        }
+        else {
+            system.get({ collection: 'users', query: { _id: document.body.dataset.user }, projection: { toured: 1 }, changeQuery: { _id: 'objectid' } }).then(user => {
+                if (!kerdx.isnull(user) && user.toured != true) {
+                    system.tour = {};
+                    this.takeTour();
+                }
+            });
+        }
+    }
+
+    takeTour() {
+        let sideBar = document.body.find('#side-bar').id;
+        let openSideBar = document.body.find('#open-side-bar');
+        if (!system.smallScreen.matches) {
+            sideBar = document.body.find('#mobile-side-bar').id;
+        }
+
+        openSideBar.click();
+        system.tour.places = system.tour.places || [
+            { description: 'Welcome!!!' },
+            {
+                identifier: `#${sideBar} .panel-link.settings `, pointer: 'topleft', description: 'This is the system settings.', link: 'settings.html'
+            },
+            {
+                identifier: '.settings-menu-link#categories', pointer: 'lefttop', description: 'This is the categories tab.', link: 'settings.html?page=categories'
+            },
+            {
+                identifier: '.settings-menu-link#tags', pointer: 'lefttop', description: 'This is the tags tab.', link: 'settings.html?page=tags'
+            },
+            {
+                identifier: '.settings-menu-link#forms', pointer: 'lefttop', description: 'This is the custom built forms tab.', link: 'settings.html?page=forms'
+            },
+            {
+                identifier: '.settings-menu-link#reportGenerators', pointer: 'lefttop', description: 'This is the report generators tab.', link: 'settings.html?page=reportGenerators'
+            },
+            {
+                identifier: '.settings-menu-link#lists', pointer: 'lefttop', description: 'This is the database for the system.', link: 'settings.html?page=lists'
+            },
+            {
+                identifier: `#${sideBar} ` + '.panel-link.forms', pointer: 'topleft', description: 'This is where the Forms in the inventory are mananaged.', link: 'forms.html'
+            },
+            {
+                identifier: `#${sideBar} .panel-link.reports `, pointer: 'topleft', description: 'This is where the Reports in the inventory are mananaged.', link: 'reports.html'
+            },
+            {
+                identifier: `#${sideBar} .panel-link.dashboard`, pointer: 'topleft', description: 'This is your dashboard.', link: 'dashboard.html'
+            },
+            {
+                identifier: `#${sideBar} .panel-link.items`, pointer: 'topleft', description: 'This is where the Items in the inventory are mananaged.', link: 'items.html'
+            },
+            {
+                identifier: `#${sideBar} .panel-link.users`, pointer: 'topleft', description: 'This is where the Users in the inventory are mananaged.', link: 'users.html'
+            },
+        ]
+
+        system.tour.current = system.tour.current || 0;
+        system.tour.window = system.tour.window || kerdx.createElement({
+            element: 'span', attributes: { id: 'tour-window' }
+        });
+
+        system.tour.container = system.tour.container || system.tour.window.makeElement({
+            element: 'div', attributes: { id: 'tour-guide-container' },
+            children: [
+                {
+                    element: 'div', attributes: { id: 'tour-guide' }, children: [
+                        { element: 'span', attributes: { id: 'tour-guide-pointer' } },
+                        { element: 'span', attributes: { id: 'tour-guide-speech' } },
+                        {
+                            element: 'span', attributes: { id: 'tour-guide-control' }, children: [
+                                { element: 'i', attributes: { id: 'back', class: 'fas fa-arrow-left' } },
+                                { element: 'span', attributes: { id: 'tour-guide-nav' } },
+                                { element: 'i', attributes: { id: 'front', class: 'fas fa-arrow-right' } },
+                            ]
+                        }
+                    ]
+                }
+            ]
+        });
+
+        system.tour.guide = system.tour.guide || system.tour.container.find('#tour-guide');
+        system.tour.pointer = system.tour.pointer || system.tour.container.find('#tour-guide-pointer');
+
+        document.body.makeElement(system.tour.window);
+        let target, position, button, speech = system.tour.guide.find('#tour-guide-speech');
+        system.tour.stops = system.tour.stops || [];
+
+        if (!system.tour.setStops) {
+            for (let i = 0; i < system.tour.places.length; i++) {
+                system.tour.stops[i] = system.tour.guide.find('#tour-guide-nav').makeElement({
+                    element: 'span', attributes: { class: 'tour-guide-stop', 'data-number': i }
+                });
+            }
+            system.tour.stops[system.tour.current].classList.add('current');
+            speech.innerHTML = system.tour.places[system.tour.current].description;
+            system.tour.window.addEventListener('click', event => {
+                target = event.target;
+                position = undefined;
+                if (target.id == 'front') {
+                    position = system.tour.current + 1;
+                }
+                else if (target.id == 'back') {
+                    position = system.tour.current - 1;
+                }
+                else if (target.classList.contains('tour-guide-stop')) {
+                    position = parseInt(target.dataset.number);
+                }
+
+                if (position != undefined) {
+                    if (position < 0) position = 0;
+
+                    if (position >= system.tour.places.length) {
+                        this.finishTour();
+                    }
+                    else {
+
+                        system.tour.stops[position].classList.add('current');
+                        system.tour.stops[system.tour.current].classList.remove('current');
+
+                        speech.innerHTML = system.tour.places[position].description;
+                        if (kerdx.isset(system.tour.places[position].link)) {
+                            system.redirect(system.tour.places[position].link);
+                        }
+
+
+                        if (kerdx.isset(system.tour.places[system.tour.current].pointer)) {
+                            system.tour.pointer.classList.remove(system.tour.places[system.tour.current].pointer);
+                        }
+
+                        if (kerdx.isset(system.tour.places[position].pointer)) {
+                            system.tour.pointer.classList.add(system.tour.places[position].pointer);
+                        }
+
+                        if (kerdx.isset(system.tour.places[position].identifier)) {
+                            button = document.body.find(system.tour.places[position].identifier);
+                            if (!kerdx.isnull(button)) {
+                                if (system.tour.places[position].pointer == 'topleft') {
+                                    system.tour.container.css({ top: button.position().top + 'px', left: button.position().right + 'px' });
+                                    system.tour.container.cssRemove(['bottom', 'right']);
+                                }
+                                else if (system.tour.places[position].pointer == 'lefttop') {
+                                    system.tour.container.css({ top: button.position().bottom + 'px', left: button.position().left + 'px' });
+                                    system.tour.container.cssRemove(['bottom', 'right']);
+                                }
+                            }
+                        }
+
+                    }
+
+                    system.tour.current = position;
+                }
+            });
+            system.tour.setStops = true;
+        }
+    }
+
+    finishTour() {
+        system.connect({ data: { action: 'tourUser' } }).then(result => {
+            log(result);
+            if (result) {
+                delete system.tour;
+                system.redirect('dashboard.html');
+                system.notify({ note: 'Tour Complete!!!' });
+            }
+        });
     }
 }
 

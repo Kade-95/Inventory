@@ -7,7 +7,7 @@ class Dashboard {
         let main = document.body.find('#main-window');
         let mainBody = main.find('#main-container-body');
 
-        let cardUnit = new kerdx.Unit(kerdx.createElement({
+        let cardUnit = new kerdx.Shadow(kerdx.createElement({
             element: 'span', attributes: { class: 'dashboard-tile' }, children: [
                 {
                     element: 'span', attributes: { class: 'dashboard-tile-title' }, children: [
@@ -34,14 +34,14 @@ class Dashboard {
             ]
         }));
 
-        let itemUnit = new kerdx.Unit(kerdx.createElement({
+        let itemUnit = new kerdx.Shadow(kerdx.createElement({
             element: 'span', attributes: { class: 'dashboard-list-item' }, children: [
                 { element: 'a', attributes: { class: 'dashboard-list-item-name' } },
                 { element: 'a', attributes: { class: 'dashboard-list-item-count' } }
             ]
         }));
 
-        let notificationUnit = new kerdx.Unit(kerdx.createElement({
+        let notificationUnit = new kerdx.Shadow(kerdx.createElement({
             element: 'div', attributes: { class: 'dashboard-notification-item' }, children: [
                 { element: 'a', attributes: { class: 'dashboard-notification-item-title' } },
                 { element: 'a', attributes: { class: 'dashboard-notification-item-read' } },
@@ -60,7 +60,7 @@ class Dashboard {
             forms: system.get({ collection: 'forms', query: {}, projection: { name: 1, _id: 0 }, many: true }),
             customforms: system.get({ collection: 'customforms', query: {}, projection: { name: 1, _id: 0 }, many: true }),
             reportgenerators: system.get({ collection: 'reportgenerators', query: {}, projection: { name: 1, _id: 0 }, many: true }),
-            notifications: system.getNotifications()
+            notifications: system.getNotifications('all')
         }, result => {
             let lowItems = 0, onlineUsers, myForms, myReports;
             let itemsCount = [], itemsLabels = [], categoriesItemCount = {};
