@@ -1,5 +1,4 @@
 window.system = {};
-window.system = {};
 
 import { Kerdx } from '../Kerdx/index.js';
 import { App } from './pages/App.js';
