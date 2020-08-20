@@ -12,7 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "bcrypt": "^4.0.1",
-    "kerds": "^1.0.1",
-    "mongodb": "^3.5.7"
+    "kerds": "^1.1.4",
+    "mongodb": "^3.6.0"
   }
 }

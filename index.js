@@ -2,6 +2,8 @@
 let { Kerds, Database } = require('kerds');
 global.fs = require('fs');
 global.zlib = require('zlib');
+global.bcrypt = require('bcrypt');
+global.ObjectId = require('mongodb').ObjectId;
 
 let metadata = {
     styles: [
@@ -36,8 +38,12 @@ let metadata = {
         './jszip/dist/jszip.min.js': {}
     }
 };
-// mongodb+srv://me:<password>@test.vqusx.gcp.mongodb.net/test
-global.kerds = new Kerds({ server: { address: "mongodb://localhost:27017/", name: 'inventory' } });
+
+let dbDetails = { address: "mongodb://localhost:27017/", name: 'inventory', user: '', password: '' };
+let cloudDbDetails = {address: 'test.vqusx.gcp.mongodb.net', name: 'inventory', user: 'me', password: '.June1995', local: false};
+
+global.db = new Database(cloudDbDetails);
+global.kerds = new Kerds();
 kerds.appPages = [
     'index.html',
     'dashboard.html',
@@ -49,9 +55,6 @@ kerds.appPages = [
     'history.html',
     'users.html'
 ];
-global.db = new Database({ address: "mongodb://localhost:27017/", name: 'inventory' });
-global.bcrypt = require('bcrypt');
-global.ObjectId = require('mongodb').ObjectId;
 
 let { PostHandler } = require('./includes/classes/PostHandler');
 let { View } = require('./includes/classes/View');
@@ -59,10 +62,8 @@ let { View } = require('./includes/classes/View');
 let postHandler = new PostHandler();
 let view = new View(metadata, 'webapp');
 global.sessions = kerds.sessionsManager.sessions;
-
 function setup() {
     return new Promise((resolve, rejects) => {
-        db.createCollection('sessions');
         resolve(true);
     });
 }
@@ -71,9 +72,9 @@ let { port, protocol } = kerds.getCommands('-');
 port = port || 8080;
 protocol = protocol || 'http';
 
-function setDb(session){
+function setDb(session) {
     if (!kerds.isset(global.sessions[session].db)) {
-        global.sessions[session].db = new Database({ address: "mongodb://localhost:27017/", name: 'inventory' });
+        global.sessions[session].db = new Database(cloudDbDetails);
     }
     if (kerds.isset(global.sessions[session].account)) {
         global.sessions[session].db.setName(global.sessions[session].account);
@@ -81,23 +82,23 @@ function setDb(session){
 }
 
 setup().then(() => {
-    kerds.createServer(port,
-        params => {
-            setDb(params.sessionId)
-            console.log(global.sessions[params.sessionId].db.name);
-            view.createView(params);
-        }, protocol,
-        { origins: ['*'] },
-        {
+    kerds.createServer({
+        port,
+        protocol,
+        domains: ['*'],
+        httpsOptions: {
             key: fs.readFileSync('./permissions/server.key'),
             cert: fs.readFileSync('./permissions/server.crt')
+        },
+        response: params => {
+            setDb(params.sessionId);
+            view.createView(params);
         }
-    );
+    });
 });
 
-kerds.recordSession(24 * 60 * 60 * 1000, ['account', 'user']);
+kerds.recordSession({ period: 24 * 60 * 60 * 1000, remember: ['account', 'user'], server: cloudDbDetails });
 kerds.handleRequests = (req, res, form) => {
     setDb(req.sessionId);
     postHandler.act(req, res, form);
 }
-
