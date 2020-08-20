@@ -223,7 +223,7 @@ class Items {
 
             if (!formValidation.flag) {
                 loading.replaceWith(form.getState({ name: 'submit' }));
-                editForm.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `Form ${formValidation.elementName} is faulty` });
+                form.setState({ name: 'error', attributes: { style: { display: 'unset' } }, text: `Form ${formValidation.elementName} is faulty` });
                 return;
             }
 

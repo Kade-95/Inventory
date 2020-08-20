@@ -2,7 +2,7 @@ window.system = {};
 
 import { Kerdx } from 'https://kade-95.github.io/kerdx/index.js';
 import { App } from './pages/App.js';
-import * as chart from 'https://cdnjs.com/libraries/Chart.js';
+import * as chart from './Chart.js';
 
 window.kerdx = new Kerdx();
 const app = new App();

@@ -2,7 +2,6 @@ const { ObjectId, Db } = require("mongodb");
 
 class PostHandler {
     constructor() {
-        global.sessions = kerds.sessionsManager.sessions;
         this.ignoreActive = ['login', 'createAccount'];
         this.adminOnly = ['createUser', 'makeAdmin', 'makeStaff', 'deleteUser'];
     }
@@ -459,11 +458,13 @@ class PostHandler {
     }
 
     logout(req, res, data) {
-        delete global.sessions[req.sessionId].user;
-        delete global.sessions[req.sessionId].account;
-        global.sessions[req.sessionId].active = false;
-
-        this.respond(req, res, true);
+        let id = req.sessionId;
+        if (kerds.isset(data.id)) {
+            id = data.id;
+        }
+        kerds.sessionsManager.destroy(id).then(done => {
+            this.respond(req, res, true);
+        });
     }
 
     changeDp(req, res, data) {
